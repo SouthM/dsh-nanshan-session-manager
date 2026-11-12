@@ -1,0 +1,53 @@
+{
+  "name": "@wangnanshan/dsh-nanshan-session-manager",
+  "version": "1.1.7",
+  "private": false,
+  "type": "module",
+  "description": "【南山】会话管理：在左侧栏筛选、按 ID 搜索、删除、恢复、导出和导入 DeepSeek Harness 的全部会话。",
+  "license": "MIT",
+  "author": "Wang Nanshan",
+  "keywords": [
+    "dsh",
+    "deepseek-harness",
+    "plugin",
+    "session",
+    "session-manager",
+    "nanshan"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "exports": {
+    ".": "./index.js",
+    "./client": "./client.js",
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg",
+    "./package.json": "./package.json",
+    "./locale/zh.json": "./locale/zh.json",
+    "./locale/en.json": "./locale/en.json"
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "icon.svg",
+    "README.md",
+    "LICENSE"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true,
+      "inject": [
+        "@deepseek-ai/dsh-client-locale",
+        "@deepseek-ai/dsh-client-ui-layout",
+        "@deepseek-ai/dsh-client-ui-sidebar",
+        "@deepseek-ai/dsh-client-ui-workspace"
+      ]
+    }
+  }
+}

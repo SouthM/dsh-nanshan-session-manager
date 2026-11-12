@@ -1,0 +1,3 @@
+- insert:
+    - id: nanshan-session-manager
+      name: '@wangnanshan/dsh-nanshan-session-manager'
