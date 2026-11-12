@@ -1,4 +1,4 @@
-# 【南山】会话管理（`@wangnanshan/dsh-nanshan-session-manager`）
+# 【南山】会话管理助手（`@wangnanshan/dsh-nanshan-session-manager`）
 
 给 DeepSeek Harness 左侧栏加一个全局入口：把本机所有会话收进一棵树，按状态筛选、按会话 ID 搜索、导出导入，删除后还能从回收站恢复。
 
@@ -8,9 +8,11 @@
 
 ## 功能
 
+![](./README_IMG/8ed6ea9f-1b7b-47ce-96a4-68b054d7fa10.png)
+
 ### 左侧栏入口
 
-启动后在左侧栏出现「【南山】会话管理」图标，与「成长历程」等全局面板并列。点击进入管理页，不会打断当前对话；点「返回对话」回到原来的会话。
+启动后在左侧栏出现「【南山】会话管理助手」图标，与「成长历程」等全局面板并列。点击进入管理页，不会打断当前对话；点「返回对话」回到原来的会话。
 
 界面文案跟随系统语言：系统为中文（任何中文变体）时显示中文，系统为英文时显示英文。插件也向 DSH locale 注册了 `zh`、`zh-CN`、`zh-Hans`、`zh-Hant`、`zh-TW`、`zh-HK` 与 `en`、`en-US`、`en-GB` 字典。
 
@@ -126,8 +128,8 @@ DSH_001/nanshan-session-manager
 
 「插件 → 已安装插件」中的名称和描述读取的是包内 locale JSON 的 `meta.title` / `meta.description`，不是 `package.json` 的 `name` 或 `description`。
 
-- `locale/zh.json` → 中文名称：`【南山】会话管理`
-- `locale/en.json` → 英文名称：`【南山】Sessions`
+- `locale/zh.json` → 中文名称：`【南山】会话管理助手`
+- `locale/en.json` → 英文名称：`【南山】Session Management Assistant`
 - `package.json.description` 只作为描述兜底；标题的最终兜底是完整包名。
 
 `package.json` 的 `exports` 需要同时导出 `./package.json` 和 locale JSON，插件管理器才能读取这两个来源。
@@ -156,3 +158,5 @@ npm publish
 - **原生侧栏标题可能短暂为空。** 导入标题保存在插件旁路，DSH 原生标题投影要等该会话被打开/重建缓存后才更新；本插件页面会立即显示备份标题。
 - **全文搜索索引不主动重建。** 本插件直接改日志目录，DSH 的 SQLite 全文索引可能短暂保留已删除会话的命中；DSH 自身的列表以持久化日志为准。
 - **不要手动修改 `sessions` 下的目录名或日志内容。** 插件按 DSH 的路径编码和 Zstd 日志格式工作，手改容易造成会话不可读。
+
+[./README_IMG/]: 

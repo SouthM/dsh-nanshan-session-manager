@@ -1,5 +1,5 @@
 /**
- * Host half of 【南山】会话管理.
+ * Host half of 【南山】会话管理助手.
  *
  * DSH deliberately has no session-deletion surface: session logs are an
  * append-only archive, and the shipped sidebar only archives them. This plugin
@@ -469,7 +469,7 @@ export function apply(ctx) {
 
   async function importBundle(bundle) {
     if (!bundle || typeof bundle !== 'object' || bundle.format !== 'dsh-nanshan-session-bundle') {
-      throw httpError(400, '这不是【南山】会话管理导出的备份文件。')
+      throw httpError(400, '这不是【南山】会话管理助手导出的备份文件。')
     }
     if (bundle.version !== 1) throw httpError(400, `不支持的备份版本：${String(bundle.version)}`)
     if (!Array.isArray(bundle.sessions)) throw httpError(400, '备份文件缺少 sessions 数组。')

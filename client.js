@@ -12,8 +12,8 @@ window.__ModuleLoader__.load({
 
     const DICTIONARIES = {
       zh: {
-        'nav.title': '【南山】会话管理',
-        'page.title': '【南山】会话管理',
+        'nav.title': '【南山】会话管理助手',
+        'page.title': '【南山】会话管理助手',
         'page.subtitle': '把本机所有会话收进一棵树：按状态筛选、按 ID 搜索、导出导入，删除后还能从回收站恢复。',
         'action.import': '导入会话',
         'action.importing': '正在导入…',
@@ -161,8 +161,8 @@ window.__ModuleLoader__.load({
         'relative.days': '{n} 天前',
       },
       en: {
-        'nav.title': '【南山】Sessions',
-        'page.title': '【南山】Sessions',
+        'nav.title': '【南山】Session Management Assistant',
+        'page.title': '【南山】Session Management Assistant',
         'page.subtitle': 'Every session in one tree: filter by state, search by ID, export, import, and recover deleted sessions from Trash.',
         'action.import': 'Import',
         'action.importing': 'Importing…',
