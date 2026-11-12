@@ -1,6 +1,6 @@
 {
   "name": "@wangnanshan/dsh-nanshan-session-manager",
-  "version": "1.1.8",
+  "version": "1.1.9",
   "private": false,
   "type": "module",
   "description": "【南山】会话管理助手：在左侧栏筛选、按 ID 搜索、删除、恢复、导出和导入 DeepSeek Harness 的全部会话。",
