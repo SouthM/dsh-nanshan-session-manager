@@ -1491,6 +1491,135 @@ export function apply(ctx) {
     () => ctx.webServer.register({ kind: 'prefix', path: API, handler }),
     'nanshan-session-manager: session management api',
   )
+
+  // Inject enabled rules into every agent step as durable instruction context.
+  ctx.on('agent/pre-step', async (payload, next) => {
+    const decision = await next()
+    if (!decision || decision.kind === 'reject') return decision
+    try {
+      const agent = payload.agent
+      const session = agent && agent.session
+      const sessionId = session && session.id
+      if (!sessionId) return decision
+
+      const rules = await loadRules()
+      const enabled = Object.values(rules).filter((rule) => rule.enabled)
+      if (enabled.length === 0) return decision
+
+      const cwd = await resolveAgentCwd(service, agent, payload.signal)
+      const workspaceId = resolveWorkspaceId(service, cwd)
+      const matched = enabled.filter((rule) => ruleMatches(rule, { sessionId, cwd, workspaceId }))
+      if (matched.length === 0) return decision
+
+      const digest = ruleContextDigest(matched)
+      if (sessionHasRuleContext(session, digest)) return decision
+
+      const batch = Array.isArray(decision.messages) ? decision.messages : []
+      if (batch.some((message) => message && message.source
+        && message.source.kind === RULE_SOURCE_KIND
+        && message.source.digest === digest)) return decision
+
+      // An empty first entry owns a no-step turn; keep context pending for the next real prompt.
+      if (payload.step === 1 && batch.length === 0) return decision
+
+      const message = {
+        id: randomUUID(),
+        role: 'user',
+        content: [{ type: 'text', text: renderRuleContext(matched) }],
+        source: { kind: RULE_SOURCE_KIND, digest },
+      }
+      return { ...decision, messages: [...batch, message] }
+    } catch (error) {
+      ctx.logger?.warn?.('nanshan-session-manager: rule injection failed: %o', error)
+      return decision
+    }
+  })
+}
+
+const RULE_SOURCE_KIND = 'nanshan-rule-context'
+
+async function resolveAgentCwd(service, agent, signal) {
+  try {
+    const workingDirectory = service('workingDirectory')
+    if (workingDirectory && typeof workingDirectory.ensure === 'function') {
+      const cwd = await workingDirectory.ensure(agent, signal)
+      if (typeof cwd === 'string' && cwd !== '') return cwd
+    }
+  } catch {
+    // Fall through to the session header when the provider is unavailable.
+  }
+  const header = agent && agent.session && agent.session.header
+  const fallback = header && (header.cwd || header.directory)
+  return typeof fallback === 'string' && fallback !== '' ? fallback : null
+}
+
+function resolveWorkspaceId(service, cwd) {
+  if (!cwd) return null
+  try {
+    const registry = service('workspaceRegistry')
+    if (!registry || typeof registry.list !== 'function') return null
+    const list = registry.list()
+    let best = null
+    for (const workspace of Array.isArray(list) ? list : []) {
+      const path = workspace && (workspace.path || workspace.directory)
+      if (typeof path !== 'string' || path === '') continue
+      if (cwd === path || cwd.startsWith(path.endsWith('/') ? path : `${path}/`)) {
+        if (!best || path.length > best.path.length) best = { id: workspace.id, path }
+      }
+    }
+    return best ? best.id : null
+  } catch {
+    return null
+  }
+}
+
+function ruleMatches(rule, { sessionId, cwd, workspaceId }) {
+  const targets = Array.isArray(rule.targets) ? rule.targets : []
+  if (rule.scope === 'global') return true
+  if (rule.scope === 'session') return targets.includes(sessionId)
+  if (rule.scope === 'workspace') {
+    if (workspaceId && targets.includes(workspaceId)) return true
+    if (cwd) {
+      return targets.some((target) => {
+        if (typeof target !== 'string' || target === '') return false
+        return cwd === target || cwd.startsWith(target.endsWith('/') ? target : `${target}/`)
+      })
+    }
+  }
+  return false
+}
+
+function ruleContextDigest(rules) {
+  const payload = rules
+    .map((rule) => `${rule.id}\u0000${rule.updatedAt}\u0000${rule.title}\u0000${rule.content}`)
+    .join('\u0001')
+  return createHash('sha256').update(payload).digest('hex').slice(0, 16)
+}
+
+function renderRuleContext(rules) {
+  const body = rules.map((rule) => `## ${rule.title}\n\n${rule.content}`).join('\n\n')
+  return [
+    '<nanshan-rules>',
+    '以下规则由用户在【南山】规则管理中启用，请在本会话的所有回复中遵守。',
+    '若此前出现过 <nanshan-rules> 块，以本条为最新版本。',
+    '',
+    body,
+    '</nanshan-rules>',
+  ].join('\n')
+}
+
+function sessionHasRuleContext(session, digest) {
+  if (!session) return false
+  const surface = session.surface
+  const nodes = surface && surface.nodes
+  if (!nodes || typeof session.eventAt !== 'function') return false
+  const seqs = Array.from(nodes)
+  for (let index = seqs.length - 1; index >= 0; index -= 1) {
+    const event = session.eventAt(seqs[index])
+    const source = event && event.type === 'user/message' && event.data && event.data.source
+    if (source && source.kind === RULE_SOURCE_KIND && source.digest === digest) return true
+  }
+  return false
 }
 
 function httpError(status, message) {

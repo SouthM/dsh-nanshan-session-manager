@@ -229,6 +229,7 @@ window.__ModuleLoader__.load({
         'rule.title': '规则列表',
         'rule.titleMeta': '共 {total} 条 · {enabled} 启用',
         'rule.new': '新建规则',
+        'rule.notice': '规则启用后会作为一条消息写入对话；停用不会撤回已写入的内容。只有之后新开启、且从未注入过该规则的对话，才不会受它影响。',
         'rule.empty': '还没有任何规则',
         'rule.emptyBody': '规则可以在全局、工作区、单个会话范围内约束 AI 助手的行为。',
         'rule.emptyCta': '创建第一条规则',
@@ -449,6 +450,7 @@ window.__ModuleLoader__.load({
         'rule.title': 'Rules',
         'rule.titleMeta': '{total} rules · {enabled} active',
         'rule.new': 'New Rule',
+        'rule.notice': 'Enabled rules are written into the conversation as a message and are not retracted when disabled. Only conversations opened afterwards that never received the rule will be unaffected.',
         'rule.empty': 'No rules yet',
         'rule.emptyBody': 'Rules constrain the AI assistant behaviour at global, workspace or session scope.',
         'rule.emptyCta': 'Create your first rule',
@@ -777,6 +779,8 @@ window.__ModuleLoader__.load({
 .nsm__rules-filter-btn { font-family: var(--nsm-font); font-size: 10.5px; font-weight: 500; padding: 4px 10px; border: none; border-radius: var(--nsm-radius-sm); background: transparent; color: var(--nsm-secondary); cursor: pointer; transition: background-color .12s ease, color .12s ease; }
 .nsm__rules-filter-btn:hover { color: var(--nsm-text); }
 .nsm__rules-filter-btn.is-active { background: var(--nsm-accent-soft); color: var(--nsm-accent); }
+.nsm__rules-notice { padding: 10px 14px; border: 1px solid var(--nsm-border); border-left: 3px solid var(--nsm-accent); border-radius: 8px; background: var(--nsm-bg); }
+.nsm__rules-notice p { margin: 0; font-size: 11.5px; line-height: 1.6; color: var(--nsm-secondary); }
 .nsm__rules-list { display: flex; flex-direction: column; gap: 10px; }
 
 /* ── v1.4 rule card ── */
@@ -2713,6 +2717,10 @@ window.__ModuleLoader__.load({
                 onClick: () => setRuleForm({ id: null, title: '', content: '' }),
               }, h(Glyph, { name: 'plus', size: 12 }), t('rule.new')),
             ));
+
+            // ── Notice ──
+            pane.push(h('div', { key: 'rule-notice', className: 'nsm__rules-notice' },
+              h('p', null, t('rule.notice'))));
 
             // ── Rules list ──
             if (rulesStatus === 'loading') {
