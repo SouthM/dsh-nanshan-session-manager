@@ -40,8 +40,10 @@ export function apply(ctx) {
   const dataRoot = join(home, 'nanshan-session-manager')
   const titlesPath = join(dataRoot, 'titles.json')
   const trashRoot = join(dataRoot, 'trash')
+  const rulesPath = join(dataRoot, 'rules.json')
 
   let titlesCache = null
+  let rulesCache = null
   let mutationChain = Promise.resolve()
   let cachedCompression = null
 
@@ -130,6 +132,254 @@ export function apply(ctx) {
     }
     cachedCompression = sawPlain && !sawZstd ? 'none' : 'zstd'
     return cachedCompression
+  }
+
+  // ─────────────────────────────────────────────────────────────
+  // Rule Manager persistence
+  // ─────────────────────────────────────────────────────────────
+  const RULE_SCOPES = new Set(['global', 'workspace', 'session'])
+  const MAX_RULES_PER_SCOPE = 500
+  const MAX_RULE_TITLE = 120
+  const MAX_RULE_CONTENT = 10_000
+
+  function uuidRule() {
+    // Deterministic but unique enough id; crypto.randomUUID() when available.
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID()
+    return `rule-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`
+  }
+
+  async function loadRules() {
+    if (rulesCache !== null) return rulesCache
+    try {
+      const raw = await readFile(rulesPath, 'utf8')
+      const parsed = JSON.parse(raw)
+      const rules = {}
+      if (parsed && typeof parsed.rules === 'object' && parsed.rules !== null) {
+        for (const [id, rule] of Object.entries(parsed.rules)) {
+          if (!rule || typeof rule !== 'object') continue
+          if (!RULE_SCOPES.has(rule.scope)) continue
+          // Backward-compatible: accept both target (single) and targets (array)
+          let targets = []
+          if (Array.isArray(rule.targets)) {
+            targets = rule.targets
+              .map((t) => String(t).trim().slice(0, 1024))
+              .filter(Boolean)
+          } else if (rule.target) {
+            targets = [String(rule.target).trim().slice(0, 1024)].filter(Boolean)
+          }
+          rules[id] = {
+            id,
+            title: String(rule.title || '').slice(0, MAX_RULE_TITLE),
+            content: String(rule.content || '').slice(0, MAX_RULE_CONTENT),
+            scope: rule.scope,
+            targets,
+            enabled: rule.enabled !== false,
+            createdAt: Number(rule.createdAt) || Date.now(),
+            updatedAt: Number(rule.updatedAt) || Date.now(),
+          }
+        }
+      }
+      rulesCache = rules
+    } catch (error) {
+      if (error && error.code === 'ENOENT') {
+        rulesCache = {}
+      } else {
+        throw error
+      }
+    }
+    return rulesCache
+  }
+
+  async function saveRules(rules) {
+    await mkdir(dataRoot, { recursive: true })
+    const payload = JSON.stringify({ version: 1, rules }, null, 2)
+    const tmpPath = `${rulesPath}.tmp`
+    await writeFile(tmpPath, payload, 'utf8')
+    await rename(tmpPath, rulesPath)
+    rulesCache = rules
+  }
+
+  async function listRules() {
+    const rules = await loadRules()
+    return { rules }
+  }
+
+  function validateRuleInput(body) {
+    const errors = []
+    if (!body || typeof body !== 'object') {
+      errors.push('invalid-payload')
+      return { errors }
+    }
+    const title = String(body.title || '').trim()
+    const content = String(body.content || '').trim()
+    const scope = String(body.scope || '').trim()
+    const rawTargets = Array.isArray(body.targets) ? body.targets : []
+    const targets = rawTargets
+      .map((t) => String(t).trim().slice(0, 1024))
+      .filter(Boolean)
+
+    if (!title) errors.push('title-empty')
+    if (title.length > MAX_RULE_TITLE) errors.push('title-too-long')
+    if (!content) errors.push('content-empty')
+    if (content.length > MAX_RULE_CONTENT) errors.push('content-too-long')
+    if (!RULE_SCOPES.has(scope)) errors.push('scope-invalid')
+    if (scope !== 'global' && targets.length === 0) errors.push('targets-required')
+    if (scope === 'global' && targets.length > 0) errors.push('targets-not-allowed')
+    if (scope !== 'global' && targets.length > 20) errors.push('targets-too-many')
+
+    return {
+      errors,
+      sanitized: {
+        title: title.slice(0, MAX_RULE_TITLE),
+        content: content.slice(0, MAX_RULE_CONTENT),
+        scope,
+        targets,
+      },
+    }
+  }
+
+  async function createRule(body) {
+    const { errors, sanitized } = validateRuleInput(body)
+    if (errors.length > 0) {
+      const err = new Error(`rule-create: ${errors.join(',')}`)
+      err.status = 400
+      err.errors = errors
+      throw err
+    }
+    const rules = await loadRules()
+    const count = Object.keys(rules).filter((id) => rules[id].scope === sanitized.scope).length
+    if (count >= MAX_RULES_PER_SCOPE) {
+      const err = new Error(`rule-create: scope-limit`)
+      err.status = 409
+      throw err
+    }
+    const now = Date.now()
+    const id = uuidRule()
+    const enabled = body && typeof body.enabled === 'boolean' ? body.enabled : true
+    const rule = {
+      id,
+      title: sanitized.title,
+      content: sanitized.content,
+      scope: sanitized.scope,
+      targets: sanitized.targets,
+      enabled,
+      createdAt: now,
+      updatedAt: now,
+    }
+    rules[id] = rule
+    await saveRules(rules)
+    return { rule }
+  }
+
+  async function updateRule(id, body) {
+    const rules = await loadRules()
+    if (!rules[id]) {
+      const err = new Error(`rule-update: not-found`)
+      err.status = 404
+      throw err
+    }
+    const existing = rules[id]
+    const patch = {}
+    let updated = false
+
+    if (body && typeof body === 'object') {
+      if ('title' in body) {
+        const title = String(body.title || '').trim()
+        if (!title) {
+          const err = new Error(`rule-update: title-empty`)
+          err.status = 400
+          throw err
+        }
+        patch.title = title.slice(0, MAX_RULE_TITLE)
+        updated = true
+      }
+      if ('content' in body) {
+        const content = String(body.content || '').trim()
+        if (!content) {
+          const err = new Error(`rule-update: content-empty`)
+          err.status = 400
+          throw err
+        }
+        patch.content = content.slice(0, MAX_RULE_CONTENT)
+        updated = true
+      }
+      if ('scope' in body) {
+        const scope = String(body.scope || '').trim()
+        if (!RULE_SCOPES.has(scope)) {
+          const err = new Error(`rule-update: scope-invalid`)
+          err.status = 400
+          throw err
+        }
+        patch.scope = scope
+        updated = true
+      }
+      if ('targets' in body) {
+        if (!Array.isArray(body.targets)) {
+          const err = new Error(`rule-update: targets-invalid`)
+          err.status = 400
+          throw err
+        }
+        patch.targets = body.targets
+          .map((t) => String(t).trim().slice(0, 1024))
+          .filter(Boolean)
+        if (patch.targets.length > 20) {
+          const err = new Error(`rule-update: targets-too-many`)
+          err.status = 400
+          throw err
+        }
+        updated = true
+      }
+      if ('enabled' in body) {
+        patch.enabled = body.enabled !== false
+        updated = true
+      }
+    }
+
+    // Scope vs targets consistency re-check
+    const nextScope = patch.scope || existing.scope
+    const nextTargets = patch.targets !== undefined ? patch.targets : existing.targets
+    if (nextScope !== 'global' && (!Array.isArray(nextTargets) || nextTargets.length === 0)) {
+      const err = new Error(`rule-update: targets-required`)
+      err.status = 400
+      throw err
+    }
+    if (nextScope === 'global' && Array.isArray(nextTargets) && nextTargets.length > 0) {
+      const err = new Error(`rule-update: targets-not-allowed`)
+      err.status = 400
+      throw err
+    }
+
+    if (updated) {
+      rules[id] = { ...existing, ...patch, updatedAt: Date.now() }
+      await saveRules(rules)
+    }
+    return { rule: rules[id] }
+  }
+
+  async function deleteRule(id) {
+    const rules = await loadRules()
+    if (!rules[id]) {
+      const err = new Error(`rule-delete: not-found`)
+      err.status = 404
+      throw err
+    }
+    const rule = rules[id]
+    delete rules[id]
+    await saveRules(rules)
+    return { rule }
+  }
+
+  async function toggleRule(id, enabled) {
+    const rules = await loadRules()
+    if (!rules[id]) {
+      const err = new Error(`rule-toggle: not-found`)
+      err.status = 404
+      throw err
+    }
+    rules[id].enabled = enabled !== false
+    rules[id].updatedAt = Date.now()
+    await saveRules(rules)
+    return { rule: rules[id] }
   }
 
   async function buildList() {
@@ -1159,6 +1409,15 @@ export function apply(ctx) {
           const stamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)
           return sendDownload(response, `nanshan-sessions-${stamp}.json`, bundle)
         }
+        if (pathname === `${API}/rules`) {
+          if (request.method === 'HEAD') {
+            response.writeHead(200, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' })
+            response.end()
+            return
+          }
+          const result = await listRules()
+          return sendJson(response, 200, { ok: true, ...result })
+        }
         return sendJson(response, 404, { ok: false, error: 'not-found', message: '未知的会话管理接口。' })
       }
 
@@ -1190,6 +1449,29 @@ export function apply(ctx) {
         const trashIds = Array.isArray(body?.trashIds) ? body.trashIds.slice(0, MAX_DELETE_SESSIONS) : []
         if (trashIds.length === 0) return sendJson(response, 400, { ok: false, error: 'trashIds', message: '请选择要彻底删除的会话。' })
         const result = await exclusive(() => purgeTrash(trashIds))
+        return sendJson(response, 200, { ok: true, ...result })
+      }
+      if (pathname === `${API}/rules/create`) {
+        const result = await exclusive(() => createRule(body))
+        return sendJson(response, 200, { ok: true, ...result })
+      }
+      if (pathname === `${API}/rules/update`) {
+        const id = body?.id ? String(body.id).trim() : ''
+        if (!id) return sendJson(response, 400, { ok: false, error: 'id', message: '缺少规则 id。' })
+        const result = await exclusive(() => updateRule(id, body))
+        return sendJson(response, 200, { ok: true, ...result })
+      }
+      if (pathname === `${API}/rules/delete`) {
+        const id = body?.id ? String(body.id).trim() : ''
+        if (!id) return sendJson(response, 400, { ok: false, error: 'id', message: '缺少规则 id。' })
+        const result = await exclusive(() => deleteRule(id))
+        return sendJson(response, 200, { ok: true, ...result })
+      }
+      if (pathname === `${API}/rules/toggle`) {
+        const id = body?.id ? String(body.id).trim() : ''
+        if (!id) return sendJson(response, 400, { ok: false, error: 'id', message: '缺少规则 id。' })
+        const enabled = body?.enabled !== false
+        const result = await exclusive(() => toggleRule(id, enabled))
         return sendJson(response, 200, { ok: true, ...result })
       }
       return sendJson(response, 404, { ok: false, error: 'not-found', message: '未知的会话管理接口。' })

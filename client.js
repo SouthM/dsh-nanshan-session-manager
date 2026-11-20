@@ -9,6 +9,68 @@ window.__ModuleLoader__.load({
     const NS = 'nanshan-session-manager';
     const PACKAGE_NAME = '@wangnanshan/dsh-nanshan-session-manager';
     const FILTERS = ['all', 'running', 'open', 'archived', 'subagent', 'pinned', 'migration'];
+    const MODULES = [
+      { id: 'session', key: 'module.session', icon: 'archive' },
+      { id: 'rule',    key: 'module.rule',    icon: 'branch' },
+    ];
+
+    const RULE_SCOPES = ['global', 'workspace', 'session'];
+
+    async function apiFetch(path, options = {}) {
+      const response = await fetch(`${API}${path}`, {
+        ...options,
+        credentials: 'same-origin',
+        headers: { accept: 'application/json', ...(options.headers || {}) },
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.ok) {
+        const err = new Error(data?.message || `HTTP ${response.status}`);
+        err.status = response.status;
+        throw err;
+      }
+      return data;
+    }
+
+    async function loadRulesApi() {
+      const data = await apiFetch('/rules');
+      return data.rules || {};
+    }
+
+    async function createRuleApi(rule) {
+      const data = await apiFetch('/rules/create', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(rule),
+      });
+      return data.rule;
+    }
+
+    async function updateRuleApi(rule) {
+      const data = await apiFetch('/rules/update', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(rule),
+      });
+      return data.rule;
+    }
+
+    async function deleteRuleApi(id) {
+      const data = await apiFetch('/rules/delete', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ id }),
+      });
+      return data.rule;
+    }
+
+    async function toggleRuleApi(id, enabled) {
+      const data = await apiFetch('/rules/toggle', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ id, enabled }),
+      });
+      return data.rule;
+    }
 
     const DICTIONARIES = {
       zh: {
@@ -159,6 +221,77 @@ window.__ModuleLoader__.load({
         'relative.minutes': '{n} 分钟前',
         'relative.hours': '{n} 小时前',
         'relative.days': '{n} 天前',
+        'module.session': '会话管理',
+        'module.session.desc': '浏览、筛选、导入导出和删除会话',
+        'module.rule': '规则管理',
+        'module.rule.desc': '管理 AI 助手行为规则与提示词',
+        'module.rule.placeholder': '规则管理功能正在开发中…',
+        'rule.title': '规则列表',
+        'rule.titleMeta': '共 {total} 条 · {enabled} 启用',
+        'rule.new': '新建规则',
+        'rule.empty': '还没有任何规则',
+        'rule.emptyBody': '规则可以在全局、工作区、单个会话范围内约束 AI 助手的行为。',
+        'rule.emptyCta': '创建第一条规则',
+        'rule.emptyFiltered': '当前筛选条件下没有规则',
+        'rule.showMore': '展开',
+        'rule.showLess': '收起',
+        'rule.listColTitle': '标题',
+        'rule.listColScope': '作用范围',
+        'rule.listColTarget': '作用对象',
+        'rule.listColUpdated': '最近更新',
+        'rule.listColActions': '操作',
+        'rule.scope.global': '全局',
+        'rule.scope.globalHint': '作用于所有会话',
+        'rule.scope.workspace': '工作区',
+        'rule.scope.workspaceHint': '仅在指定工作区生效',
+        'rule.scope.workspacePick': '选择工作区',
+        'rule.scope.session': '会话',
+        'rule.scope.sessionHint': '仅在指定会话生效',
+        'rule.scope.sessionPick': '选择会话',
+        'rule.picker.workspaceTitle': '选择工作区',
+        'rule.picker.sessionTitle': '选择会话',
+        'rule.picker.search': '搜索…',
+        'rule.picker.empty': '暂无数据',
+        'rule.picker.selected': '已选 {n} 项',
+        'rule.filter.all': '全部规则',
+        'rule.filter.enabled': '已启用',
+        'rule.filter.disabled': '已禁用',
+        'rule.filter.scope': '按作用范围',
+        'rule.filter.scopeAll': '全部范围',
+        'rule.filter.scopeGlobal': '全局',
+        'rule.filter.scopeWorkspace': '工作区',
+        'rule.filter.scopeSession': '会话',
+        'rule.target.global': '—',
+        'rule.toggleOn': '启用',
+        'rule.toggleOff': '禁用',
+        'rule.edit': '编辑',
+        'rule.delete': '删除',
+        'rule.deleteConfirmTitle': '删除规则？',
+        'rule.deleteConfirmBody': '删除后无法恢复，确定要删除 "{title}" 吗？',
+        'rule.form.newTitle': '新建规则',
+        'rule.form.editTitle': '编辑规则',
+        'rule.form.titleLabel': '规则标题',
+        'rule.form.titlePlaceholder': '用一句话描述这条规则的作用',
+        'rule.form.contentLabel': '规则内容',
+        'rule.form.contentPlaceholder': '输入自然语言提示词或行为约束…',
+        'rule.form.scopeLabel': '作用范围',
+        'rule.form.targetLabel': '作用对象',
+        'rule.form.targetPlaceholder': '选择或输入作用对象 ID',
+        'rule.form.markdownHint': '规则内容支持 Markdown 格式（# 标题、**粗体**、- 列表、`代码` 等）',
+        'rule.form.editMode': '编辑',
+        'rule.form.previewMode': '预览',
+        'rule.form.enabledLabel': '启用',
+        'rule.form.save': '保存',
+        'rule.form.cancel': '取消',
+        'rule.form.delete': '删除',
+        'rule.form.titleEmpty': '请填写规则标题',
+        'rule.form.contentEmpty': '请填写规则内容',
+        'rule.form.targetRequired': '作用范围为「{scope}」时必须指定作用对象',
+        'rule.saved': '规则已保存',
+        'rule.created': '规则已创建',
+        'rule.deleted': '规则已删除',
+        'rule.loadError': '规则加载失败',
+        'rule.saveError': '规则保存失败',
       },
       en: {
         'nav.title': '【南山】Session Management Assistant',
@@ -308,6 +441,77 @@ window.__ModuleLoader__.load({
         'relative.minutes': '{n} min ago',
         'relative.hours': '{n} h ago',
         'relative.days': '{n} d ago',
+        'module.session': 'Session Manager',
+        'module.session.desc': 'Browse, filter, import, export and delete sessions',
+        'module.rule': 'Rule Manager',
+        'module.rule.desc': 'Manage AI assistant behavior rules and prompts',
+        'module.rule.placeholder': 'Rule management is under development…',
+        'rule.title': 'Rules',
+        'rule.titleMeta': '{total} rules · {enabled} active',
+        'rule.new': 'New Rule',
+        'rule.empty': 'No rules yet',
+        'rule.emptyBody': 'Rules constrain the AI assistant behaviour at global, workspace or session scope.',
+        'rule.emptyCta': 'Create your first rule',
+        'rule.emptyFiltered': 'No rules match the current filter',
+        'rule.listColTitle': 'Title',
+        'rule.listColScope': 'Scope',
+        'rule.listColTarget': 'Target',
+        'rule.listColUpdated': 'Updated',
+        'rule.listColActions': 'Actions',
+        'rule.scope.global': 'Global',
+        'rule.scope.globalHint': 'Applies to all sessions',
+        'rule.scope.workspace': 'Workspace',
+        'rule.scope.workspaceHint': 'Only in the specified workspace',
+        'rule.scope.workspacePick': 'Pick workspace',
+        'rule.scope.session': 'Session',
+        'rule.scope.sessionHint': 'Only in the specified session',
+        'rule.scope.sessionPick': 'Pick session',
+        'rule.picker.workspaceTitle': 'Select workspaces',
+        'rule.picker.sessionTitle': 'Select sessions',
+        'rule.picker.search': 'Search…',
+        'rule.picker.empty': 'No data',
+        'rule.picker.selected': '{n} selected',
+        'rule.filter.all': 'All rules',
+        'rule.filter.enabled': 'Active',
+        'rule.filter.disabled': 'Disabled',
+        'rule.filter.scope': 'By scope',
+        'rule.filter.scopeAll': 'Any scope',
+        'rule.filter.scopeGlobal': 'Global',
+        'rule.filter.scopeWorkspace': 'Workspace',
+        'rule.filter.scopeSession': 'Session',
+        'rule.target.global': '—',
+        'rule.toggleOn': 'Enable',
+        'rule.toggleOff': 'Disable',
+        'rule.edit': 'Edit',
+        'rule.delete': 'Delete',
+        'rule.deleteConfirmTitle': 'Delete rule?',
+        'rule.deleteConfirmBody': 'This cannot be undone. Delete "{title}"?',
+        'rule.form.newTitle': 'New Rule',
+        'rule.form.editTitle': 'Edit Rule',
+        'rule.form.titleLabel': 'Rule title',
+        'rule.form.titlePlaceholder': 'One sentence describing this rule',
+        'rule.form.contentLabel': 'Rule content',
+        'rule.form.contentPlaceholder': 'Natural-language prompt or behaviour constraints…',
+        'rule.form.scopeLabel': 'Scope',
+        'rule.form.targetLabel': 'Target',
+        'rule.form.targetPlaceholder': 'Select or enter target ID',
+        'rule.form.markdownHint': 'Content supports Markdown (## headings, **bold**, - lists, `code` etc.)',
+        'rule.form.editMode': 'Edit',
+        'rule.form.previewMode': 'Preview',
+        'rule.form.enabledLabel': 'Enabled',
+        'rule.form.save': 'Save',
+        'rule.form.cancel': 'Cancel',
+        'rule.form.delete': 'Delete',
+        'rule.form.titleEmpty': 'Please enter a rule title',
+        'rule.form.contentEmpty': 'Please enter rule content',
+        'rule.form.targetRequired': 'Target is required when scope is "{scope}"',
+        'rule.saved': 'Rule saved',
+        'rule.created': 'Rule created',
+        'rule.showMore': 'Show more',
+        'rule.showLess': 'Show less',
+        'rule.deleted': 'Rule deleted',
+        'rule.loadError': 'Failed to load rules',
+        'rule.saveError': 'Failed to save rule',
       },
     };
 
@@ -330,8 +534,8 @@ window.__ModuleLoader__.load({
   --nsm-green: var(--dsw-alias-state-success-primary);
   --nsm-amber: var(--dsw-alias-state-warn-primary);
   --nsm-violet: var(--dsw-alias-state-done-primary);
-  --nsm-radius: 9px;
-  --nsm-radius-sm: 6px;
+  --nsm-radius: 8px;
+  --nsm-radius-sm: 5px;
   --nsm-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, "Helvetica Neue", Arial, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
   height: 100%;
   overflow-y: auto;
@@ -367,13 +571,14 @@ window.__ModuleLoader__.load({
 .nsm__button--ghost { border-color: transparent; background: transparent; color: var(--nsm-secondary); }
 .nsm__button--ghost:hover:not(:disabled) { background: var(--nsm-hover); color: var(--nsm-text); }
 .nsm__button--small { height: 26px; padding: 0 8px; font-size: 11.5px; }
-.nsm__stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); margin-top: 24px; border: 1px solid var(--nsm-border); border-radius: var(--nsm-radius); background: var(--nsm-surface); overflow: hidden; }
-.nsm__stat { position: relative; padding: 14px 16px; border-left: 1px solid var(--nsm-border); background: transparent; }
-.nsm__stat:first-child { border-left: 0; }
+.nsm__stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 4px; border-radius: var(--nsm-radius); background: transparent; gap: 4px; }
+.nsm__stat { position: relative; padding: 14px 16px; border-radius: var(--nsm-radius); background: var(--nsm-surface); border: 1px solid var(--nsm-border); }
+.nsm__stat:first-child { }
+.nsm__stat + .nsm__stat { }
 .nsm__stat::after { display: none; }
 .nsm__stat-label { display: block; font-size: 11px; font-weight: 500; line-height: 1.4; color: var(--nsm-tertiary); }
 .nsm__stat-value { display: block; margin-top: 3px; font-family: var(--nsm-font); font-size: 20px; font-weight: 600; line-height: 1.2; letter-spacing: -.02em; color: var(--nsm-text); font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.nsm__toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 16px; padding: 8px; border: 1px solid var(--nsm-border); border-radius: var(--nsm-radius); background: var(--nsm-surface); }
+.nsm__toolbar { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 12px; padding: 10px 14px; border: 1px solid var(--nsm-border); border-radius: var(--nsm-radius); background: var(--nsm-surface); }
 .nsm__viewtabs { display: flex; align-items: center; flex: none; gap: 2px; padding: 2px; border: 1px solid var(--nsm-border); border-radius: var(--nsm-radius-sm); background: var(--nsm-muted-surface); }
 .nsm__viewtab { appearance: none; display: inline-flex; align-items: center; justify-content: center; gap: 5px; height: 26px; padding: 0 10px; border: 1px solid transparent; border-radius: 5px; background: transparent; color: var(--nsm-secondary); font-size: 11.5px; font-weight: 500; line-height: 1; white-space: nowrap; cursor: pointer; }
 .nsm__viewtab:hover { color: var(--nsm-text); background: var(--nsm-hover); }
@@ -385,7 +590,7 @@ window.__ModuleLoader__.load({
 .nsm__search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--nsm-tertiary); pointer-events: none; }
 .nsm__search input { width: 100%; height: 30px; padding: 0 30px 0 32px; border: 1px solid var(--nsm-border-strong); border-radius: var(--nsm-radius-sm); background: var(--nsm-bg); color: var(--nsm-text); font-size: 12px; outline: none; transition: border-color .12s ease, box-shadow .12s ease; }
 .nsm__search input::placeholder { color: var(--nsm-tertiary); }
-.nsm__search input:focus { border-color: var(--nsm-accent); box-shadow: 0 0 0 3px var(--nsm-accent-soft); }
+.nsm__search input:focus { border-color: var(--nsm-accent); }
 .nsm__search-clear { position: absolute; right: 3px; top: 50%; transform: translateY(-50%); display: grid; place-items: center; width: 24px; height: 24px; padding: 0; border: 0; border-radius: 4px; background: transparent; color: var(--nsm-tertiary); cursor: pointer; }
 .nsm__search-clear:hover { background: var(--nsm-hover); color: var(--nsm-text); }
 .nsm__toolbar-spacer { flex: 1 1 auto; }
@@ -398,7 +603,7 @@ window.__ModuleLoader__.load({
 .nsm__filter.is-active .nsm__filter-count { color: inherit; opacity: .72; }
 .nsm__layout { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 16px; align-items: start; margin-top: 16px; }
 .nsm__tree-card { min-width: 0; border: 1px solid var(--nsm-border); border-radius: var(--nsm-radius); background: var(--nsm-surface); overflow: hidden; }
-.nsm__tree-head { display: flex; align-items: center; gap: 8px; min-height: 42px; padding: 0 14px; border-bottom: 1px solid var(--nsm-border); background: transparent; }
+.nsm__tree-head { display: flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 14px; border-bottom: 1px solid var(--nsm-border); background: transparent; }
 .nsm__tree-head h2 { margin: 0; font-family: var(--nsm-font); font-size: 12.5px; font-weight: 600; line-height: 1.4; letter-spacing: -.01em; color: var(--nsm-text); }
 .nsm__tree-head-meta { margin-left: auto; color: var(--nsm-tertiary); font-size: 11px; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .nsm__tree-body { padding: 4px 6px 8px; }
@@ -489,7 +694,8 @@ window.__ModuleLoader__.load({
 .nsm__fact button { appearance: none; padding: 0; border: 0; background: none; color: inherit; font: inherit; text-align: left; word-break: break-word; cursor: pointer; }
 .nsm__fact button:hover { color: var(--nsm-accent); text-decoration: underline; text-underline-offset: 2px; }
 .nsm__detail-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--nsm-border); }
-.nsm__import-card { background: var(--nsm-surface); }
+.nsm__import-card { background: transparent; border: none; padding: 0; }
+.nsm__import-card .nsm__card-head { display: none; }
 .nsm__import-card .nsm__button { margin-top: 2px; }
 .nsm__empty { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 240px; padding: 32px 20px; text-align: center; }
 .nsm__empty-mark { display: grid; place-items: center; width: 48px; height: 48px; padding: 8px; border: 1px solid var(--nsm-accent-line); border-radius: 9px; background: linear-gradient(145deg, color-mix(in srgb, var(--nsm-accent) 14%, transparent), color-mix(in srgb, var(--nsm-accent) 4%, transparent)); color: var(--nsm-accent); }
@@ -503,7 +709,7 @@ window.__ModuleLoader__.load({
 @keyframes nsm-spin { to { transform: rotate(360deg); } }
 .nsm__error { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 240px; padding: 28px; text-align: center; }
 .nsm__error p { margin: 0 0 14px; color: var(--nsm-danger); font-size: 12px; line-height: 1.6; }
-.nsm__report { margin: 0 0 14px; padding: 10px 12px; border: 1px solid var(--nsm-border); border-radius: var(--nsm-radius-sm); background: var(--nsm-surface); }
+.nsm__report { margin: 0 0 14px; padding: 10px 12px; border: 1px solid var(--nsm-border); border-radius: var(--nsm-radius-sm); background: var(--nsm-muted-surface); }
 .nsm__report-head { display: flex; align-items: center; gap: 8px; color: var(--nsm-text); font-size: 12px; font-weight: 500; }
 .nsm__report-head .nsm__icon-button { margin-left: auto; }
 .nsm__report ul { margin: 6px 0 0; padding-left: 18px; color: var(--nsm-tertiary); font-size: 11px; line-height: 1.6; }
@@ -514,7 +720,17 @@ window.__ModuleLoader__.load({
 .nsm__footer-copy:hover { background: var(--nsm-hover); color: var(--nsm-text); border-color: var(--nsm-border-strong); }
 .nsm__footer-copy:focus-visible { outline: 2px solid var(--nsm-accent); outline-offset: 1px; }
 .nsm__modal { position: fixed; inset: 0; z-index: 1200; display: grid; place-items: center; padding: 22px; background: rgba(15, 17, 21, .38); backdrop-filter: blur(2px); }
-.nsm__dialog { box-sizing: border-box; width: min(440px, 100%); max-height: min(620px, 90vh); overflow: auto; padding: 20px; border: 1px solid var(--nsm-border); border-radius: 10px; background: var(--nsm-surface); box-shadow: var(--dsw-shadow-lv3, 0 12px 32px rgba(0, 0, 0, .16)); }
+.nsm__modal-card { box-sizing: border-box; width: min(520px, 100%); max-height: min(90vh, 780px); overflow: auto; padding: 18px 20px 16px; border: none; border-radius: 12px; background: var(--nsm-surface); box-shadow: 0 20px 48px rgba(0, 0, 0, .12), 0 4px 12px rgba(0, 0, 0, .08); }
+.nsm__form-card { width: min(90vw, 1100px); max-height: min(90vh, 860px); padding: 20px 24px 18px; }
+.nsm__confirm-card { width: min(400px, 100%); }
+.nsm__modal-head { display: flex; align-items: center; justify-content: space-between; margin: 0 0 14px; }
+.nsm__modal-head h3 { margin: 0; font-family: var(--nsm-font); font-size: 14px; font-weight: 600; letter-spacing: -.01em; color: var(--nsm-text); }
+.nsm__modal-body { margin: 0 0 6px; font-size: 12px; line-height: 1.65; color: var(--nsm-secondary); }
+.nsm__modal-close { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border: none; border-radius: var(--nsm-radius-sm); background: transparent; color: var(--nsm-secondary); cursor: pointer; transition: background-color .12s ease, color .12s ease; }
+.nsm__modal-close:hover { background: var(--nsm-hover); color: var(--nsm-text); }
+.nsm__form-input.is-error,
+.nsm__form-textarea.is-error { border-color: #ef4444; box-shadow: 0 0 0 2px rgba(239, 68, 68, .12); }
+.nsm__dialog { box-sizing: border-box; width: min(440px, 100%); max-height: min(620px, 90vh); overflow: auto; padding: 20px; border: none; border-radius: 12px; background: var(--nsm-surface); box-shadow: 0 20px 48px rgba(0, 0, 0, .12), 0 4px 12px rgba(0, 0, 0, .08); }
 .nsm__dialog h2 { margin: 0 0 8px; font-family: var(--nsm-font); font-size: 16px; font-weight: 600; line-height: 1.35; letter-spacing: -.01em; }
 .nsm__dialog-warning { margin: 0 0 12px; color: var(--nsm-secondary); font-size: 12px; line-height: 1.65; }
 .nsm__dialog-list { margin: 0 0 12px; padding: 8px 10px; list-style: none; border: 1px solid var(--nsm-border); border-radius: var(--nsm-radius-sm); background: var(--nsm-muted-surface); font-size: 11.5px; line-height: 1.75; }
@@ -533,12 +749,163 @@ window.__ModuleLoader__.load({
 .nsm__toast-action:hover { background: rgba(255, 255, 255, .16); }
 @keyframes nsm-toast-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 .nsm__sr { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+/* ── Module workspace (sidebar + content) ── */
+.nsm__workspace { display: grid; grid-template-columns: 180px minmax(0, 1fr); gap: 16px; align-items: start; margin-top: 24px; }
+.nsm__sidebar { display: flex; flex-direction: column; gap: 4px; position: sticky; top: 16px; padding: 4px; border: none; border-radius: 0; background: transparent; }
+.nsm__module { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border: 1px solid transparent; border-radius: var(--nsm-radius-sm); background: transparent; cursor: pointer; transition: background-color .12s ease, border-color .12s ease; text-align: left; color: var(--nsm-secondary); }
+.nsm__module:hover { background: var(--nsm-hover); color: var(--nsm-text); }
+.nsm__module:focus-visible { outline: 2px solid var(--nsm-accent); outline-offset: -2px; }
+.nsm__module.is-active { border-color: var(--nsm-accent-line); background: var(--nsm-accent-soft); color: var(--nsm-accent); }
+.nsm__module-icon { display: grid; place-items: center; width: 22px; height: 22px; color: currentColor; }
+.nsm__module-icon svg { width: 14px; height: 14px; }
+.nsm__module-label { font-family: var(--nsm-font); font-size: 12px; font-weight: 600; line-height: 1.3; letter-spacing: -.005em; }
+.nsm__main { min-width: 0; display: flex; flex-direction: column; gap: 0; padding: 0; border: none; border-radius: 0; background: transparent; }
+.nsm__pane { display: flex; flex-direction: column; gap: 16px; }
+/* Rule manager placeholder */
+.nsm__rule-placeholder { display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 320px; padding: 32px 24px; text-align: center; border: 1px dashed var(--nsm-border); border-radius: var(--nsm-radius); background: var(--nsm-surface); }
+.nsm__rule-placeholder-mark { display: grid; place-items: center; width: 56px; height: 56px; padding: 10px; border: 1px solid var(--nsm-border-strong); border-radius: 12px; color: var(--nsm-tertiary); background: var(--nsm-muted-surface); }
+.nsm__rule-placeholder-mark svg { display: block; width: 100%; height: 100%; }
+.nsm__rule-placeholder h2 { margin: 14px 0 4px; font-family: var(--nsm-font); font-size: 15px; font-weight: 600; line-height: 1.4; letter-spacing: -.01em; color: var(--nsm-text); }
+.nsm__rule-placeholder p { max-width: 360px; margin: 0; color: var(--nsm-tertiary); font-size: 11.5px; line-height: 1.6; }
+/* ── Rule Manager (v1.4 Linear/Vercel style) ── */
+.nsm__rules-toolbar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 0; border: none; border-radius: 0; background: transparent; }
+.nsm__rules-toolbar-head { display: flex; align-items: center; gap: 8px; margin-right: auto; }
+.nsm__rules-title { font-family: var(--nsm-font); font-size: 13px; font-weight: 600; color: var(--nsm-text); letter-spacing: -.005em; }
+.nsm__rules-meta { font-size: 10.5px; color: var(--nsm-tertiary); }
+.nsm__rules-filter { display: inline-flex; gap: 4px; }
+.nsm__rules-filter-group { display: inline-flex; gap: 4px; padding: 2px; border: 1px solid var(--nsm-border); border-radius: var(--nsm-radius-sm); background: var(--nsm-bg); }
+.nsm__rules-filter-btn { font-family: var(--nsm-font); font-size: 10.5px; font-weight: 500; padding: 4px 10px; border: none; border-radius: var(--nsm-radius-sm); background: transparent; color: var(--nsm-secondary); cursor: pointer; transition: background-color .12s ease, color .12s ease; }
+.nsm__rules-filter-btn:hover { color: var(--nsm-text); }
+.nsm__rules-filter-btn.is-active { background: var(--nsm-accent-soft); color: var(--nsm-accent); }
+.nsm__rules-list { display: flex; flex-direction: column; gap: 10px; }
+
+/* ── v1.4 rule card ── */
+.nsm__rule-card { display: flex; flex-direction: column; gap: 10px; padding: 16px 18px; border: 1px solid var(--nsm-border); border-radius: 10px; background: var(--nsm-surface); transition: border-color .15s ease, background-color .15s ease; }
+.nsm__rule-card:hover { border-color: var(--nsm-border-strong); }
+.nsm__rule-card.is-disabled { opacity: .55; }
+.nsm__rule-card-head { display: flex; align-items: center; gap: 10px; }
+.nsm__rule-card-title { flex: 1 1 auto; min-width: 0; font-family: var(--nsm-font); font-size: 13.5px; font-weight: 600; color: var(--nsm-text); line-height: 1.4; letter-spacing: -.01em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nsm__rule-card-title.is-disabled { color: var(--nsm-tertiary); text-decoration: line-through; }
+.nsm__rule-card-meta { flex-shrink: 0; display: inline-flex; align-items: center; gap: 8px; font-size: 10.5px; color: var(--nsm-tertiary); font-variant-numeric: tabular-nums; }
+.nsm__rule-card-body { font-family: var(--nsm-mono); font-size: 11.5px; line-height: 1.6; color: var(--nsm-secondary); }
+.nsm__rule-card-content { white-space: pre-wrap; word-break: break-word; overflow: hidden; transition: max-height .25s ease; }
+.nsm__rule-card-content.is-collapsed { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; max-height: 3.2em; }
+.nsm__rule-card-toggle { font-family: var(--nsm-font); font-size: 11px; font-weight: 500; padding: 2px 0; border: none; background: transparent; color: var(--nsm-accent); cursor: pointer; margin-top: 2px; letter-spacing: .01em; }
+.nsm__rule-card-toggle:hover { text-decoration: underline; }
+
+/* Foot: scope tabs + picker + actions */
+.nsm__rule-card-foot { display: flex; align-items: center; gap: 10px; padding-top: 10px; border-top: 1px solid var(--nsm-border); }
+.nsm__rule-card-foot .nsm__toggle { margin-left: 0; }
+.nsm__rule-card-foot .nsm__icon-btn { width: 28px; height: 28px; }
+.nsm__rule-card-foot-spacer { flex: 1 1 auto; }
+
+/* Segmented scope tabs */
+.nsm__scope-tabs { display: inline-flex; align-items: center; padding: 2px; border: 1px solid var(--nsm-border); border-radius: 7px; background: var(--nsm-bg); gap: 1px; }
+.nsm__scope-tab { font-family: var(--nsm-font); font-size: 11px; font-weight: 500; padding: 4px 10px; border: none; border-radius: 5px; background: transparent; color: var(--nsm-secondary); cursor: pointer; transition: background-color .12s ease, color .12s ease; white-space: nowrap; }
+.nsm__scope-tab:not(.is-active):hover { color: var(--nsm-text); background: var(--nsm-hover); }
+.nsm__scope-tab.is-active { background: var(--nsm-text); color: var(--nsm-surface); font-weight: 600; box-shadow: none; }
+.nsm__scope-tab.is-active:hover { color: var(--nsm-surface); }
+
+/* Global scope hint */
+.nsm__scope-global-hint { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: var(--nsm-tertiary); padding: 3px 10px; background: rgba(59, 130, 246, .08); border-radius: 999px; white-space: nowrap; }
+.nsm__scope-global-hint::before { content: ''; width: 5px; height: 5px; border-radius: 50%; background: #3b82f6; }
+
+/* Picker button (workspace/session) */
+.nsm__scope-picker-btn { display: inline-flex; align-items: center; gap: 6px; font-family: var(--nsm-font); font-size: 11px; font-weight: 500; padding: 4px 12px; border: 1px solid var(--nsm-border); border-radius: 7px; background: var(--nsm-surface); color: var(--nsm-text); cursor: pointer; transition: border-color .12s ease, background-color .12s ease; white-space: nowrap; }
+.nsm__scope-picker-btn:hover { border-color: var(--nsm-border-strong); background: var(--nsm-hover); }
+.nsm__scope-picker-btn[data-scope="workspace"] { color: #10b981; }
+.nsm__scope-picker-btn[data-scope="session"] { color: #f59e0b; }
+.nsm__scope-picker-btn .nsm__scope-count { display: inline-flex; align-items: center; justify-content: center; min-width: 16px; height: 16px; padding: 0 5px; border-radius: 8px; font-size: 10px; font-weight: 600; background: var(--nsm-bg); color: var(--nsm-secondary); font-variant-numeric: tabular-nums; }
+
+/* ── Picker modal (tree selection) ── */
+.nsm__picker { display: flex; flex-direction: column; gap: 0; }
+.nsm__picker-search { box-sizing: border-box; width: 100%; padding: 8px 10px; border: 1px solid var(--nsm-border); border-radius: var(--nsm-radius-sm); background: var(--nsm-bg); color: var(--nsm-text); font-family: var(--nsm-font); font-size: 12px; }
+.nsm__picker-search:focus { outline: none; border-color: var(--nsm-accent); }
+.nsm__picker-tree { max-height: 52vh; overflow: auto; margin-top: 10px; }
+.nsm__picker-group { border-bottom: 1px solid var(--nsm-border); }
+.nsm__picker-group:last-child { border-bottom: none; }
+.nsm__picker-group-head { display: flex; align-items: center; gap: 6px; padding: 8px 4px; font-size: 11.5px; font-weight: 600; color: var(--nsm-text); font-family: var(--nsm-font); }
+.nsm__picker-group-arrow { font-size: 9px; color: var(--nsm-tertiary); transition: transform .15s ease; cursor: pointer; user-select: none; width: 12px; display: inline-block; text-align: center; }
+.nsm__picker-group-arrow.is-open { transform: rotate(90deg); }
+.nsm__picker-group-label { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nsm__picker-group-count { font-size: 10.5px; color: var(--nsm-tertiary); font-weight: 400; }
+.nsm__picker-month { padding: 6px 4px 4px 20px; font-size: 10.5px; font-weight: 500; color: var(--nsm-tertiary); }
+.nsm__picker-item { display: flex; align-items: center; gap: 8px; padding: 6px 4px 6px 28px; cursor: pointer; border-radius: 5px; transition: background-color .1s ease; }
+.nsm__picker-item:hover { background: var(--nsm-hover); }
+.nsm__picker-item.is-workspace { padding-left: 4px; }
+.nsm__picker-item-label { flex: 1 1 auto; min-width: 0; font-size: 11.5px; color: var(--nsm-text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nsm__picker-item-meta { font-size: 10px; color: var(--nsm-tertiary); font-variant-numeric: tabular-nums; }
+.nsm__picker-actions { display: flex; justify-content: space-between; align-items: center; padding-top: 12px; border-top: 1px solid var(--nsm-border); margin-top: 4px; }
+.nsm__picker-actions .nsm__picker-selected-info { font-size: 11px; color: var(--nsm-tertiary); }
+.nsm__picker-actions .nsm__modal-footer { border-top: none; margin: 0; padding: 0; display: flex; gap: 8px; }
+.nsm__rule-title-link { font-family: var(--nsm-font); font-size: 12.5px; font-weight: 500; color: var(--nsm-text); cursor: pointer; transition: color .12s ease; display: flex; align-items: center; gap: 8px; }
+.nsm__rule-title-link:hover { color: var(--nsm-accent); }
+.nsm__rule-title-link.is-disabled { color: var(--nsm-tertiary); text-decoration: line-through; }
+.nsm__rule-content-preview { display: block; margin-top: 2px; max-width: 320px; font-size: 11px; color: var(--nsm-tertiary); line-height: 1.45; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nsm__rule-scope-cell { min-width: 72px; }
+.nsm__scope-pill { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 10px; font-size: 10.5px; font-weight: 500; line-height: 1.5; }
+.nsm__scope-pill[data-scope="global"] { background: rgba(59, 130, 246, .12); color: #3b82f6; }
+.nsm__scope-pill[data-scope="workspace"] { background: rgba(16, 185, 129, .12); color: #10b981; }
+.nsm__scope-pill[data-scope="session"] { background: rgba(245, 158, 11, .12); color: #f59e0b; }
+.nsm__rule-target-cell { min-width: 120px; max-width: 200px; color: var(--nsm-tertiary); font-family: var(--nsm-mono); font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nsm__rule-updated-cell { min-width: 80px; color: var(--nsm-tertiary); font-size: 11px; }
+.nsm__rule-actions { display: inline-flex; align-items: center; gap: 4px; }
+/* Toggle switch */
+.nsm__toggle { position: relative; display: inline-block; width: 28px; height: 16px; flex-shrink: 0; }
+.nsm__toggle input { position: absolute; opacity: 0; width: 0; height: 0; }
+.nsm__toggle-track { position: absolute; inset: 0; border-radius: 8px; background: var(--nsm-border); transition: background-color .15s ease; cursor: pointer; }
+.nsm__toggle-track::after { content: ''; position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: #fff; transition: transform .15s ease; }
+.nsm__toggle input:checked + .nsm__toggle-track { background: var(--nsm-accent); }
+.nsm__toggle input:checked + .nsm__toggle-track::after { transform: translateX(12px); }
+.nsm__toggle input:focus-visible + .nsm__toggle-track { outline: 2px solid var(--nsm-accent); outline-offset: 1px; }
+.nsm__icon-btn { display: inline-flex; align-items: center; justify-content: center; width: 26px; height: 26px; border: none; border-radius: var(--nsm-radius-sm); background: transparent; color: var(--nsm-secondary); cursor: pointer; transition: background-color .12s ease, color .12s ease; }
+.nsm__icon-btn:hover { background: var(--nsm-hover); color: var(--nsm-text); }
+.nsm__icon-btn.is-danger:hover { background: rgba(239, 68, 68, .1); color: #ef4444; }
+/* Rule form in modal */
+.nsm__form { display: flex; flex-direction: column; gap: 14px; }
+.nsm__form-field { display: flex; flex-direction: column; gap: 6px; }
+.nsm__form-label { font-family: var(--nsm-font); font-size: 11.5px; font-weight: 600; color: var(--nsm-secondary); letter-spacing: .01em; }
+.nsm__form-input,
+.nsm__form-textarea,
+.nsm__form-select { width: 100%; box-sizing: border-box; padding: 8px 10px; border: 1px solid var(--nsm-border); border-radius: var(--nsm-radius-sm); background: var(--nsm-bg); color: var(--nsm-text); font-family: inherit; font-size: 12.5px; line-height: 1.5; transition: border-color .12s ease, box-shadow .12s ease; }
+.nsm__form-input:focus,
+.nsm__form-textarea:focus,
+.nsm__form-select:focus { outline: none; border-color: var(--nsm-accent); }
+.nsm__form-textarea { min-height: 320px; resize: vertical; font-family: var(--nsm-mono); font-size: 11.5px; line-height: 1.55; }
+.nsm__form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.nsm__form-label-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.nsm__form-preview-btn { font-family: var(--nsm-font); font-size: 11px; font-weight: 500; padding: 2px 10px; border: 1px solid var(--nsm-border); border-radius: var(--nsm-radius-sm); background: var(--nsm-bg); color: var(--nsm-secondary); cursor: pointer; transition: background-color .12s ease, color .12s ease, border-color .12s ease; }
+.nsm__form-preview-btn:hover { border-color: var(--nsm-accent-line); color: var(--nsm-accent); background: var(--nsm-accent-soft); }
+.nsm__markdown-preview { box-sizing: border-box; min-height: 320px; max-height: 60vh; overflow: auto; padding: 18px 20px; border: 1px solid var(--nsm-border); border-radius: var(--nsm-radius-sm); background: var(--nsm-muted-surface); font-size: 12.5px; line-height: 1.7; color: var(--nsm-text); }
+.nsm__markdown-preview h1, .nsm__markdown-preview h2, .nsm__markdown-preview h3 { font-family: var(--nsm-font); margin: 10px 0 6px; font-weight: 600; color: var(--nsm-text); }
+.nsm__markdown-preview h1 { font-size: 17px; }
+.nsm__markdown-preview h2 { font-size: 15px; }
+.nsm__markdown-preview h3 { font-size: 13.5px; }
+.nsm__markdown-preview p { margin: 4px 0; }
+.nsm__markdown-preview ul { margin: 6px 0 6px 20px; padding: 0; }
+.nsm__markdown-preview li { margin: 2px 0; }
+.nsm__markdown-preview strong { color: var(--nsm-text); }
+.nsm__markdown-preview em { color: var(--nsm-secondary); font-style: italic; }
+.nsm__markdown-preview code { font-family: var(--nsm-mono); font-size: 11.5px; padding: 1px 5px; border-radius: 3px; background: rgba(0,0,0,.06); color: #b91c1c; }
+.nsm__form-target { display: flex; flex-direction: column; gap: 6px; }
+.nsm__form-target-row { display: flex; gap: 8px; align-items: stretch; }
+.nsm__form-target-row .nsm__form-input { flex: 1 1 200px; }
+.nsm__form-enable { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; border: none; border-radius: var(--nsm-radius-sm); background: var(--nsm-muted-surface); }
+.nsm__form-enable-label { font-size: 12px; color: var(--nsm-text); }
+.nsm__modal-footer { display: flex; gap: 8px; justify-content: flex-end; padding-top: 10px; border-top: 1px solid var(--nsm-border); margin-top: 6px; }
+.nsm__modal-footer .nsm__button--danger { margin-right: auto; }
+@media (max-width: 600px) {
+  .nsm__form-row { grid-template-columns: 1fr; }
+}
 @media (max-width: 1080px) {
   .nsm__layout { grid-template-columns: minmax(0, 1fr); }
   .nsm__aside { position: static; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
   .nsm__detail-card { grid-column: span 2; }
 }
 @media (max-width: 900px) {
+  .nsm__workspace { grid-template-columns: 1fr; }
+  .nsm__sidebar { position: static; flex-direction: row; overflow-x: auto; padding: 6px; }
+  .nsm__module { flex: 1 1 45%; min-width: 140px; }
   .nsm__stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .nsm__stat:nth-child(3) { border-left: 0; border-top: 1px solid var(--nsm-border); }
   .nsm__stat:nth-child(4) { border-top: 1px solid var(--nsm-border); }
@@ -616,6 +983,9 @@ window.__ModuleLoader__.load({
       if (name === 'pin') return h('svg', common, h('path', { d: 'M9.7 2.6 13.4 6.3l-1.9.5-2.6 2.6-.2 2.1-1.3-1.3-2.6 2.6-.9-.9 2.6-2.6L5.2 8l2.1-.2 2.6-2.6.5-1.9Z' }));
       if (name === 'alert') return h('svg', common, h('path', { d: 'M8 2.5 14 13H2L8 2.5Z' }), h('path', { d: 'M8 6.2v3.1M8 11.4v.1' }));
       if (name === 'clock') return h('svg', common, h('circle', { cx: 8, cy: 8, r: 5.6 }), h('path', { d: 'M8 4.8V8l2.2 1.4' }));
+      if (name === 'edit') return h('svg', common, h('path', { d: 'M4.2 10.6 10.4 4.4l2.8 2.8L7 13.4H4.2z' }), h('path', { d: 'M10.8 4l2.8 2.8' }));
+      if (name === 'save') return h('svg', common, h('path', { d: 'M3.2 3.2h7.2l4 4V12.8H3.2z' }), h('path', { d: 'M6.4 12.8V9.2h3.2v3.6' }));
+      if (name === 'plus') return h('svg', common, h('path', { d: 'M8 3.2v9.6M3.2 8h9.6' }));
       return h('svg', common, h('circle', { cx: 8, cy: 8, r: 5 }));
     }
 
@@ -658,6 +1028,183 @@ window.__ModuleLoader__.load({
         h('circle', { cx: 24, cy: 16, r: 1.9, fill: 'currentColor', stroke: 'none' }),
         h('circle', { cx: 19, cy: 23.5, r: 1.9, fill: 'currentColor', stroke: 'none' }),
       );
+    }
+
+    function ConfirmModal(props) {
+      const { title, body, danger, confirmLabel, cancelLabel, onConfirm, onCancel, t } = props;
+      const overlayRef = React.useRef(null);
+      React.useEffect(() => {
+        function onKey(e) {
+          if (e.key === 'Escape') onCancel?.();
+        }
+        document.addEventListener('keydown', onKey);
+        return () => document.removeEventListener('keydown', onKey);
+      }, [onCancel]);
+      return h('div', {
+        className: 'nsm__modal is-open',
+        role: 'dialog',
+        'aria-modal': 'true',
+        'aria-labelledby': 'nsm-confirm-title',
+        ref: overlayRef,
+        onClick: (e) => { if (e.target === overlayRef.current) onCancel?.(); },
+      },
+        h('div', { className: 'nsm__modal-card nsm__confirm-card' },
+          h('div', { className: 'nsm__modal-head' },
+            h('h3', { id: 'nsm-confirm-title' }, title),
+          ),
+          h('div', { className: 'nsm__modal-body' },
+            h('p', null, body),
+          ),
+          h('div', { className: 'nsm__modal-footer' },
+            h('button', { type: 'button', className: 'nsm__button', onClick: onCancel }, cancelLabel || t('rule.form.cancel')),
+            h('button', {
+              type: 'button',
+              className: `nsm__button${danger ? ' nsm__button--danger' : ' nsm__button--primary'}`,
+              onClick: onConfirm,
+              autoFocus: true,
+            }, confirmLabel || t('rule.form.save')),
+          ),
+        ));
+    }
+
+    // Minimal markdown → inline HTML (safe, no external deps)
+    function renderMarkdown(md) {
+      if (!md) return '';
+      // 转义 HTML
+      const escaped = String(md)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+      const lines = escaped.split('\n');
+      const out = [];
+      let inList = false;
+      for (const rawLine of lines) {
+        const line = rawLine.replace(/\s+$/, '');
+        if (!line.trim()) {
+          if (inList) { out.push('</ul>'); inList = false; }
+          continue;
+        }
+        // Headings
+        const h = line.match(/^(#{1,3})\s+(.+)$/);
+        if (h) {
+          if (inList) { out.push('</ul>'); inList = false; }
+          const level = h[1].length;
+          out.push(`<h${level}>${h[2]}</h${level}>`);
+          continue;
+        }
+        // List items
+        const li = line.match(/^[-*]\s+(.+)$/);
+        if (li) {
+          if (!inList) { out.push('<ul>'); inList = true; }
+          out.push(`<li>${li[1]}</li>`);
+          continue;
+        }
+        // Numbered list
+        const nl = line.match(/^\d+\.\s+(.+)$/);
+        if (nl) {
+          if (!inList) { out.push('<ul>'); inList = true; }
+          out.push(`<li>${nl[1]}</li>`);
+          continue;
+        }
+        if (inList) { out.push('</ul>'); inList = false; }
+        // Inline: **bold** *italic* `code`
+        let inline = line
+          .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
+          .replace(/\*(.+?)\*/g, '<em>$1</em>')
+          .replace(/`([^`]+)`/g, '<code>$1</code>');
+        out.push(`<p>${inline}</p>`);
+      }
+      if (inList) out.push('</ul>');
+      return out.join('');
+    }
+
+    function RuleFormModal(props) {
+      const { form, onClose, onChange, onSave, onDelete, t } = props;
+      const [titleErr, setTitleErr] = React.useState(false);
+      const [contentErr, setContentErr] = React.useState(false);
+      const [preview, setPreview] = React.useState(false);
+      const overlayRef = React.useRef(null);
+      const titleRef = React.useRef(null);
+
+      React.useEffect(() => {
+        titleRef.current?.focus();
+      }, []);
+
+      React.useEffect(() => {
+        function onKey(e) { if (e.key === 'Escape') onClose?.(); }
+        document.addEventListener('keydown', onKey);
+        return () => document.removeEventListener('keydown', onKey);
+      }, [onClose]);
+
+      function handleSubmit(e) {
+        e.preventDefault?.();
+        const titleEmpty = !form?.title?.trim();
+        const contentEmpty = !form?.content?.trim();
+        setTitleErr(titleEmpty);
+        setContentErr(contentEmpty);
+        if (titleEmpty || contentEmpty) return;
+        onSave?.({ title: form.title.trim(), content: form.content.trim() });
+      }
+
+      function onKeydown(e) {
+        if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') handleSubmit(e);
+      }
+
+      return h('div', {
+        className: 'nsm__modal is-open', role: 'dialog', 'aria-modal': 'true',
+        'aria-labelledby': 'nsm-rule-form-title', ref: overlayRef,
+        onClick: (e) => { if (e.target === overlayRef.current) onClose?.(); },
+      },
+        h('div', { className: 'nsm__modal-card nsm__form-card nsm__form-card--rule' },
+          h('div', { className: 'nsm__modal-head' },
+            h('h3', { id: 'nsm-rule-form-title' }, form?.id ? t('rule.form.editTitle') : t('rule.form.newTitle')),
+            h('button', { type: 'button', className: 'nsm__modal-close', 'aria-label': t('rule.form.cancel'), onClick: onClose }, h(Glyph, { name: 'close', size: 14 })),
+          ),
+          h('form', { className: 'nsm__form', onSubmit: handleSubmit, onKeyDown: onKeydown },
+            h('div', { className: 'nsm__form-field' },
+              h('label', { className: 'nsm__form-label', htmlFor: 'nsm-rule-title' }, t('rule.form.titleLabel')),
+              h('input', {
+                id: 'nsm-rule-title', ref: titleRef,
+                type: 'text',
+                className: `nsm__form-input${titleErr ? ' is-error' : ''}`,
+                value: form?.title || '',
+                placeholder: t('rule.form.titlePlaceholder'),
+                maxLength: 120,
+                onChange: (e) => { setTitleErr(false); onChange?.({ title: e.target.value }); },
+              }),
+            ),
+            h('div', { className: 'nsm__form-field' },
+              h('div', { className: 'nsm__form-label-row' },
+                h('label', { className: 'nsm__form-label', htmlFor: 'nsm-rule-content' }, t('rule.form.contentLabel')),
+                h('button', {
+                  type: 'button', className: 'nsm__form-preview-btn',
+                  onClick: () => setPreview((v) => !v),
+                }, preview ? t('rule.form.editMode') : t('rule.form.previewMode')),
+              ),
+              preview
+                ? h('div', {
+                    className: 'nsm__markdown-preview',
+                    dangerouslySetInnerHTML: { __html: renderMarkdown(form?.content || '') },
+                  })
+                : h('textarea', {
+                    id: 'nsm-rule-content',
+                    className: `nsm__form-textarea${contentErr ? ' is-error' : ''}`,
+                    value: form?.content || '',
+                    placeholder: t('rule.form.contentPlaceholder'),
+                    rows: 12,
+                    onChange: (e) => { setContentErr(false); onChange?.({ content: e.target.value }); },
+                  }),
+              h('p', { className: 'nsm__form-hint' }, t('rule.form.markdownHint')),
+            ),
+            h('div', { className: 'nsm__modal-footer' },
+              onDelete
+                ? h('button', { type: 'button', className: 'nsm__button nsm__button--danger', onClick: onDelete }, t('rule.form.delete'))
+                : null,
+              h('button', { type: 'button', className: 'nsm__button', onClick: onClose }, t('rule.form.cancel')),
+              h('button', { type: 'submit', className: 'nsm__button nsm__button--primary' }, h(Glyph, { name: 'save', size: 12 }), t('rule.form.save')),
+            ),
+          ),
+        ));
     }
 
     return {
@@ -896,6 +1443,15 @@ window.__ModuleLoader__.load({
           const [importReport, setImportReport] = React.useState(null);
           const [toast, setToast] = React.useState(null);
           const [dragActive, setDragActive] = React.useState(false);
+          const [activeModule, setActiveModule] = React.useState('session');
+          const [rulesData, setRulesData] = React.useState({});
+          const [rulesStatus, setRulesStatus] = React.useState('idle');
+          const [ruleForm, setRuleForm] = React.useState(null);
+          const [deleteRuleId, setDeleteRuleId] = React.useState(null);
+          const [collapsedRules, setCollapsedRules] = React.useState({});
+          const [picker, setPicker] = React.useState(null); // { ruleId, scope, targets, expanded, search }
+          const [sessionsData, setSessionsData] = React.useState(null); // tree data for picker
+          const rulesLoadedRef = React.useRef(false);
           const dataRef = React.useRef(null);
           const dragDepth = React.useRef(0);
           const fileInputRef = React.useRef(null);
@@ -905,6 +1461,173 @@ window.__ModuleLoader__.load({
             toastSeq.current += 1;
             setToast({ kind, text, action, seq: toastSeq.current });
           }, []);
+
+          // ── Rule module helpers ──
+          const loadRules = React.useCallback(async () => {
+            setRulesStatus('loading');
+            try {
+              const rules = await loadRulesApi();
+              setRulesData(rules);
+              rulesLoadedRef.current = true;
+              setRulesStatus('ready');
+            } catch (err) {
+              setRulesStatus('error');
+              showToast('error', t('rule.loadError'));
+            }
+          }, [showToast, t]);
+
+          // Auto-load rules when switching to rule module for the first time
+          React.useEffect(() => {
+            if (activeModule === 'rule' && !rulesLoadedRef.current) {
+              loadRules();
+            }
+          }, [activeModule, loadRules]);
+
+          const handleToggleRule = React.useCallback(async (id, enabled) => {
+            // Optimistic update
+            setRulesData((prev) => {
+              const next = { ...prev };
+              if (next[id]) next[id] = { ...next[id], enabled, updatedAt: Date.now() };
+              return next;
+            });
+            try {
+              await toggleRuleApi(id, enabled);
+            } catch {
+              // Revert
+              setRulesData((prev) => {
+                const next = { ...prev };
+                if (next[id]) next[id] = { ...next[id], enabled: !enabled };
+                return next;
+              });
+              showToast('error', t('rule.saveError'));
+            }
+          }, [showToast, t]);
+
+          const handleScopeChange = React.useCallback(async (id, nextScope) => {
+            const targets = nextScope === 'global' ? [] : (rulesData[id]?.targets || []);
+            // Optimistic
+            setRulesData((prev) => {
+              const next = { ...prev };
+              if (next[id]) next[id] = { ...next[id], scope: nextScope, targets, updatedAt: Date.now() };
+              return next;
+            });
+            try {
+              await updateRuleApi({ id, scope: nextScope, targets });
+            } catch {
+              setRulesData((prev) => ({ ...prev }));
+              showToast('error', t('rule.saveError'));
+            }
+          }, [rulesData, showToast, t]);
+
+          // Lazy-load sessions tree data for picker
+          const ensureSessionsData = React.useCallback(async () => {
+            if (sessionsData && sessionsData.length) return sessionsData;
+            try {
+              const data = await apiFetch('');
+              const sessions = Array.isArray(data?.sessions) ? data.sessions : [];
+              setSessionsData(sessions);
+              return sessions;
+            } catch {
+              return [];
+            }
+          }, [sessionsData]);
+
+          const openPicker = React.useCallback(async (ruleId, scope, existingTargets) => {
+            await ensureSessionsData();
+            setPicker({
+              ruleId,
+              scope,
+              targets: Array.isArray(existingTargets) ? [...existingTargets] : [],
+              expanded: {},
+              search: '',
+            });
+          }, [ensureSessionsData]);
+
+          const closePicker = React.useCallback(() => setPicker(null), []);
+
+          const handlePickerConfirm = React.useCallback(async () => {
+            if (!picker) return;
+            try {
+              await updateRuleApi({ id: picker.ruleId, scope: picker.scope, targets: picker.targets });
+              setRulesData((prev) => {
+                const next = { ...prev };
+                if (next[picker.ruleId]) next[picker.ruleId] = { ...next[picker.ruleId], scope: picker.scope, targets: picker.targets, updatedAt: Date.now() };
+                return next;
+              });
+              showToast('ok', t('rule.saved'));
+              setPicker(null);
+            } catch {
+              showToast('error', t('rule.saveError'));
+            }
+          }, [picker, showToast, t]);
+
+          const togglePickerTarget = React.useCallback((targetId) => {
+            setPicker((prev) => {
+              if (!prev) return prev;
+              const has = prev.targets.includes(targetId);
+              return { ...prev, targets: has ? prev.targets.filter((t) => t !== targetId) : [...prev.targets, targetId] };
+            });
+          }, []);
+
+          const togglePickerGroup = React.useCallback((key) => {
+            setPicker((prev) => prev ? { ...prev, expanded: { ...prev.expanded, [key]: !prev.expanded[key] } } : prev);
+          }, []);
+
+          const toggleRuleCollapsed = React.useCallback((id) => {
+            setCollapsedRules((prev) => ({ ...prev, [id]: !prev[id] }));
+          }, []);
+
+          const handleDeleteRule = React.useCallback(async (id) => {
+            try {
+              await deleteRuleApi(id);
+              setRulesData((prev) => {
+                const next = { ...prev };
+                delete next[id];
+                return next;
+              });
+              setDeleteRuleId(null);
+              showToast('ok', t('rule.deleted'));
+            } catch {
+              showToast('error', t('rule.saveError'));
+            }
+          }, [showToast, t]);
+
+          const handleSaveRule = React.useCallback(async (form) => {
+            try {
+              let saved;
+              if (form.id) {
+                // Update: only title + content (scope/enabled not exposed in UI)
+                saved = await updateRuleApi({ id: form.id, title: form.title, content: form.content });
+                showToast('ok', t('rule.saved'));
+              } else {
+                // Create: default scope=global, enabled=true
+                saved = await createRuleApi({ title: form.title, content: form.content, scope: 'global', targets: [], enabled: false });
+                showToast('ok', t('rule.created'));
+              }
+              setRulesData((prev) => ({ ...prev, [saved.id]: saved }));
+              setRuleForm(null);
+            } catch (err) {
+              showToast('error', t('rule.saveError'));
+            }
+          }, [showToast, t]);
+
+          // Computed: filtered + sorted rules
+          const computedRules = React.useMemo(() => {
+            const all = Object.values(rulesData);
+            all.sort((a, b) => b.updatedAt - a.updatedAt);
+            return all;
+          }, [rulesData]);
+
+          const ruleStats = React.useMemo(() => {
+            const total = Object.keys(rulesData).length;
+            let enabled = 0;
+            const byScope = { global: 0, workspace: 0, session: 0 };
+            for (const r of Object.values(rulesData)) {
+              if (r.enabled) enabled++;
+              byScope[r.scope] = (byScope[r.scope] || 0) + 1;
+            }
+            return { total, enabled, byScope };
+          }, [rulesData]);
 
           const fetchList = React.useCallback(async (signal) => {
             const response = await fetch(API, { method: 'GET', credentials: 'same-origin', headers: { accept: 'application/json' }, signal });
@@ -1767,206 +2490,512 @@ window.__ModuleLoader__.load({
             ));
           }
 
-          if (data) {
-            content.push(h('section', { key: 'stats', className: 'nsm__stats' },
-              h('div', { className: 'nsm__stat' }, h('span', { className: 'nsm__stat-label' }, t('stats.total')), h('span', { className: 'nsm__stat-value' }, String(stats.total))),
-              h('div', { className: 'nsm__stat' }, h('span', { className: 'nsm__stat-label' }, t('stats.live')), h('span', { className: 'nsm__stat-value' }, String(stats.live))),
-              h('div', { className: 'nsm__stat' }, h('span', { className: 'nsm__stat-label' }, t('stats.groups')), h('span', { className: 'nsm__stat-value' }, String(stats.groups))),
-              h('div', { className: 'nsm__stat' }, h('span', { className: 'nsm__stat-label' }, t('stats.size')), h('span', { className: 'nsm__stat-value' }, formatBytes(stats.bytes))),
-            ));
-          }
+          // ── Module workspace: sidebar (navigation) + main (content) ──
+          const mainContent = [];
 
-          content.push(h('div', { key: 'toolbar', className: 'nsm__toolbar' },
-            h('div', { className: 'nsm__viewtabs', role: 'tablist' },
-              h('button', {
-                type: 'button',
-                role: 'tab',
-                'aria-selected': view === 'sessions' ? 'true' : 'false',
-                className: `nsm__viewtab${view === 'sessions' ? ' is-active' : ''}`,
-                onClick: () => setView('sessions'),
-              }, t('view.sessions')),
-              h('button', {
-                type: 'button',
-                role: 'tab',
-                'aria-selected': view === 'trash' ? 'true' : 'false',
-                className: `nsm__viewtab${view === 'trash' ? ' is-active' : ''}`,
-                onClick: () => setView('trash'),
-              }, t('view.trash'), h('span', { className: 'nsm__tab-count' }, String(trash.length))),
-            ),
-            h('div', { className: 'nsm__search' },
-              h('span', { className: 'nsm__search-icon' }, h(Glyph, { name: 'search', size: 14 })),
-              h('input', {
-                type: 'search',
-                value: query,
-                placeholder: view === 'trash' ? t('search.trashPlaceholder') : t('search.placeholder'),
-                'aria-label': view === 'trash' ? t('search.trashPlaceholder') : t('search.placeholder'),
-                onChange: (event) => setQuery(event.target.value),
-              }),
-              query !== '' ? h('button', {
-                type: 'button',
-                className: 'nsm__search-clear',
-                title: t('search.clear'),
-                'aria-label': t('search.clear'),
-                onClick: () => setQuery(''),
-              }, h(Glyph, { name: 'close', size: 12 })) : null,
-            ),
-            h(Check, {
-              checked: activeAllSelected,
-              mixed: activeSomeSelected,
-              label: t('action.selectAll'),
-              onChange: (next) => view === 'trash' ? toggleTrashSelected(visibleTrashIds, next) : toggleSelected(visibleIds, next),
-            }),
-            h('button', {
-              type: 'button',
-              className: 'nsm__button nsm__button--small nsm__button--ghost',
-              disabled: activeVisibleIds.length === 0 && activeSelectionCount === 0,
-              onClick: activeSelectionCount > 0
-                ? () => { if (view === 'trash') setSelectedTrashIds([]); else setSelectedIds([]); }
-                : () => { if (view === 'trash') toggleTrashSelected(visibleTrashIds, true); else toggleSelected(visibleIds, true); },
-            }, activeSelectionCount > 0 ? t('action.clearSelection') : t('action.selectAll')),
-            h('span', { className: 'nsm__toolbar-spacer' }),
-            h('button', { type: 'button', className: 'nsm__button nsm__button--small nsm__button--ghost', onClick: expandAll }, t('action.expandAll')),
-            h('button', { type: 'button', className: 'nsm__button nsm__button--small nsm__button--ghost', onClick: collapseAll }, t('action.collapseAll')),
-            h('button', {
-              type: 'button',
-              className: 'nsm__button nsm__button--small',
-              disabled: status === 'refreshing' || status === 'loading',
-              onClick: async () => {
-                await load({ silent: true });
-                await refreshNative();
-                showToast('ok', t('toast.refreshed'));
-              },
-            }, h(Glyph, { name: 'refresh', size: 12 }), t('action.refresh')),
-          ));
+          if (activeModule === 'session') {
+            const pane = [];
 
-          if (data && view === 'sessions') {
-            content.push(h('div', { key: 'filters', className: 'nsm__filters', role: 'group', 'aria-label': t('filter.label') },
-              FILTERS.map((id) => h('button', {
-                key: id,
-                type: 'button',
-                className: `nsm__filter${stateFilter === id ? ' is-active' : ''}`,
-                'aria-pressed': stateFilter === id ? 'true' : 'false',
-                onClick: () => setStateFilter(id),
-              }, t(`filter.${id}`), h('span', { className: 'nsm__filter-count' }, String(filterCounts[id] || 0)))),
-            ));
-          }
-
-          if (status === 'loading' && !data) {
-            content.push(h('div', { key: 'loading', className: 'nsm__loading' }, h('span', { className: 'nsm__spinner' }), h('span', null, t('loading'))));
-          } else if (status === 'error' && !data) {
-            content.push(h('div', { key: 'error', className: 'nsm__error' },
-              h('p', null, error || t('error.load')),
-              h('button', { type: 'button', className: 'nsm__button', onClick: () => load({}) }, t('action.retry')),
-            ));
-          } else if (data) {
-            content.push(h('div', { key: 'layout', className: 'nsm__layout' },
-              h('section', { key: 'tree', className: 'nsm__tree-card' },
-                h('div', { className: 'nsm__tree-head' },
-                  h('h2', null, view === 'trash' ? t('trash.title') : t('tree.title')),
-                  h('span', { className: 'nsm__tree-head-meta' }, view === 'trash'
-                    ? trashCount(visibleTrash.length)
-                    : sessionCount(visibleSessions.length)),
-                ),
-                h('div', { className: 'nsm__tree-body', role: 'tree', 'aria-label': view === 'trash' ? t('trash.title') : t('page.title') },
-                  view === 'trash'
-                    ? (visibleTrash.length === 0
-                        ? h('div', { className: 'nsm__empty' },
-                            h('span', { className: 'nsm__empty-mark nsm__empty-mark--trash' }, h(Glyph, { name: 'trash', size: 52 })),
-                            h('h2', null, normalizedQuery === '' ? t('trash.empty') : t('tree.emptyFiltered')),
-                            h('p', null, normalizedQuery === '' ? t('trash.emptyBody') : t('tree.emptyFilteredBody')),
-                            normalizedQuery === ''
-                              ? h('button', { type: 'button', className: 'nsm__button', onClick: () => setView('sessions') }, t('view.sessions'))
-                              : h('button', { type: 'button', className: 'nsm__button', onClick: () => setQuery('') }, t('search.clear')),
-                          )
-                        : trashGroups.map(renderTrashGroup))
-                    : (visibleSessions.length === 0
-                        ? h('div', { className: 'nsm__empty' },
-                            h('span', { className: 'nsm__empty-mark' }, h(PageMark, { size: 64 })),
-                            h('h2', null, normalizedQuery === '' && stateFilter === 'all' ? t('empty.title') : t('tree.emptyFiltered')),
-                            h('p', null, normalizedQuery === '' && stateFilter === 'all' ? t('empty.body') : t('tree.emptyFilteredBody')),
-                            normalizedQuery === '' && stateFilter === 'all'
-                              ? h('button', { type: 'button', className: 'nsm__button nsm__button--primary', onClick: () => fileInputRef.current && fileInputRef.current.click() }, t('empty.cta'))
-                              : h('button', { type: 'button', className: 'nsm__button', onClick: () => { setQuery(''); setStateFilter('all'); } }, t('search.clear')),
-                          )
-                        : groups.map(renderGroup)),
-                ),
-              ),
-              h('aside', { key: 'aside', className: 'nsm__aside' },
-                h('section', { className: 'nsm__card' },
-                  h('div', { className: 'nsm__card-head' }, h('h2', null, view === 'trash'
-                    ? (selectedTrashEntries.length > 0 ? tr('selection.count', { n: selectedTrashEntries.length }) : t('selection.none'))
-                    : (selectedSessions.length > 0 ? tr('selection.count', { n: selectedSessions.length }) : t('selection.none')))),
-                  (view === 'trash' ? selectedTrashEntries.length > 0 : selectedSessions.length > 0)
-                    ? h('p', { className: 'nsm__selection-size' }, tr('selection.size', { size: formatBytes(view === 'trash' ? selectedTrashBytes : selectedBytes) }))
-                    : null,
-                  h('div', { className: 'nsm__selection-actions' },
-                    view === 'trash' ? [
-                      h('button', {
-                        key: 'restore',
-                        type: 'button',
-                        className: 'nsm__button nsm__button--primary',
-                        disabled: selectedTrashEntries.length === 0 || busy,
-                        onClick: () => restoreEntries(selectedTrashEntries.map((entry) => entry.trashId)),
-                      }, h(Glyph, { name: 'restore', size: 13 }), t('trash.restoreSelected')),
-                      h('button', {
-                        key: 'purge',
-                        type: 'button',
-                        className: 'nsm__button nsm__button--danger',
-                        disabled: selectedTrashEntries.length === 0 || busy,
-                        onClick: () => requestPurge(selectedTrashEntries.map((entry) => entry.trashId)),
-                      }, h(Glyph, { name: 'trash', size: 13 }), t('trash.purgeSelected')),
-                    ] : [
-                      h('button', {
-                        key: 'export',
-                        type: 'button',
-                        className: 'nsm__button',
-                        disabled: selectedSessions.length === 0,
-                        onClick: () => exportSessions(selectedSessions.map((session) => session.id)),
-                      }, h(Glyph, { name: 'export', size: 13 }), t('action.exportSelected')),
-                      h('button', {
-                        key: 'delete',
-                        type: 'button',
-                        className: 'nsm__button nsm__button--danger',
-                        disabled: !canDeleteSelected || busy,
-                        onClick: () => requestDelete(selectedSessions.map((session) => session.id)),
-                      }, h(Glyph, { name: 'trash', size: 13 }), t('action.deleteSelected')),
-                    ],
-                  ),
-                  h('p', { className: 'nsm__hint' }, view === 'trash' ? t('selection.trashHint') : t('selection.hint')),
-                ),
-                renderDetail(),
-                h('section', { className: 'nsm__card nsm__import-card' },
-                  h('div', { className: 'nsm__card-head' }, h('h2', null, t('import.title'))),
-                  h('p', { className: 'nsm__hint', style: { marginTop: 0 } }, t('import.hint')),
-                  h('button', {
-                    type: 'button',
-                    className: 'nsm__button',
-                    disabled: importing,
-                    onClick: () => fileInputRef.current && fileInputRef.current.click(),
-                  }, h(Glyph, { name: 'import', size: 13 }), importing ? t('action.importing') : t('action.import')),
-                ),
-              ),
-            ));
-
-            if (data.sessionRoot) {
-              content.push(h('footer', { key: 'footer', className: 'nsm__footer' },
-                h('div', { className: 'nsm__footer-line' },
-                  h('span', null, `${t('footer.storage')} `, h('code', null, data.sessionRoot)),
-                ),
-                h('div', { className: 'nsm__footer-line' },
-                  h('span', null, t('footer.package'), h('code', null, PACKAGE_NAME)),
-                  h('button', {
-                    type: 'button',
-                    className: 'nsm__footer-copy',
-                    title: t('action.copyPackage'),
-                    'aria-label': t('action.copyPackage'),
-                    onClick: () => copyId(PACKAGE_NAME),
-                  }, h(Glyph, { name: 'copy', size: 11 })),
-                ),
-                h('div', { className: 'nsm__footer-line' }, h('span', null, t('footer.note'))),
+            if (data) {
+              pane.push(h('section', { key: 'stats', className: 'nsm__stats' },
+                h('div', { className: 'nsm__stat' }, h('span', { className: 'nsm__stat-label' }, t('stats.total')), h('span', { className: 'nsm__stat-value' }, String(stats.total))),
+                h('div', { className: 'nsm__stat' }, h('span', { className: 'nsm__stat-label' }, t('stats.live')), h('span', { className: 'nsm__stat-value' }, String(stats.live))),
+                h('div', { className: 'nsm__stat' }, h('span', { className: 'nsm__stat-label' }, t('stats.groups')), h('span', { className: 'nsm__stat-value' }, String(stats.groups))),
+                h('div', { className: 'nsm__stat' }, h('span', { className: 'nsm__stat-label' }, t('stats.size')), h('span', { className: 'nsm__stat-value' }, formatBytes(stats.bytes))),
               ));
             }
+
+            pane.push(h('div', { key: 'toolbar', className: 'nsm__toolbar' },
+              h('div', { className: 'nsm__viewtabs', role: 'tablist' },
+                h('button', {
+                  type: 'button',
+                  role: 'tab',
+                  'aria-selected': view === 'sessions' ? 'true' : 'false',
+                  className: `nsm__viewtab${view === 'sessions' ? ' is-active' : ''}`,
+                  onClick: () => setView('sessions'),
+                }, t('view.sessions')),
+                h('button', {
+                  type: 'button',
+                  role: 'tab',
+                  'aria-selected': view === 'trash' ? 'true' : 'false',
+                  className: `nsm__viewtab${view === 'trash' ? ' is-active' : ''}`,
+                  onClick: () => setView('trash'),
+                }, t('view.trash'), h('span', { className: 'nsm__tab-count' }, String(trash.length))),
+              ),
+              h('div', { className: 'nsm__search' },
+                h('span', { className: 'nsm__search-icon' }, h(Glyph, { name: 'search', size: 14 })),
+                h('input', {
+                  type: 'search',
+                  value: query,
+                  placeholder: view === 'trash' ? t('search.trashPlaceholder') : t('search.placeholder'),
+                  'aria-label': view === 'trash' ? t('search.trashPlaceholder') : t('search.placeholder'),
+                  onChange: (event) => setQuery(event.target.value),
+                }),
+                query !== '' ? h('button', {
+                  type: 'button',
+                  className: 'nsm__search-clear',
+                  title: t('search.clear'),
+                  'aria-label': t('search.clear'),
+                  onClick: () => setQuery(''),
+                }, h(Glyph, { name: 'close', size: 12 })) : null,
+              ),
+              h(Check, {
+                checked: activeAllSelected,
+                mixed: activeSomeSelected,
+                label: t('action.selectAll'),
+                onChange: (next) => view === 'trash' ? toggleTrashSelected(visibleTrashIds, next) : toggleSelected(visibleIds, next),
+              }),
+              h('button', {
+                type: 'button',
+                className: 'nsm__button nsm__button--small nsm__button--ghost',
+                disabled: activeVisibleIds.length === 0 && activeSelectionCount === 0,
+                onClick: activeSelectionCount > 0
+                  ? () => { if (view === 'trash') setSelectedTrashIds([]); else setSelectedIds([]); }
+                  : () => { if (view === 'trash') toggleTrashSelected(visibleTrashIds, true); else toggleSelected(visibleIds, true); },
+              }, activeSelectionCount > 0 ? t('action.clearSelection') : t('action.selectAll')),
+              h('span', { className: 'nsm__toolbar-spacer' }),
+              h('button', { type: 'button', className: 'nsm__button nsm__button--small nsm__button--ghost', onClick: expandAll }, t('action.expandAll')),
+              h('button', { type: 'button', className: 'nsm__button nsm__button--small nsm__button--ghost', onClick: collapseAll }, t('action.collapseAll')),
+              h('button', {
+                type: 'button',
+                className: 'nsm__button nsm__button--small',
+                disabled: status === 'refreshing' || status === 'loading',
+                onClick: async () => {
+                  await load({ silent: true });
+                  await refreshNative();
+                  showToast('ok', t('toast.refreshed'));
+                },
+              }, h(Glyph, { name: 'refresh', size: 12 }), t('action.refresh')),
+            ));
+
+            if (data && view === 'sessions') {
+              pane.push(h('div', { key: 'filters', className: 'nsm__filters', role: 'group', 'aria-label': t('filter.label') },
+                FILTERS.map((id) => h('button', {
+                  key: id,
+                  type: 'button',
+                  className: `nsm__filter${stateFilter === id ? ' is-active' : ''}`,
+                  'aria-pressed': stateFilter === id ? 'true' : 'false',
+                  onClick: () => setStateFilter(id),
+                }, t(`filter.${id}`), h('span', { className: 'nsm__filter-count' }, String(filterCounts[id] || 0)))),
+              ));
+            }
+
+            if (status === 'loading' && !data) {
+              pane.push(h('div', { key: 'loading', className: 'nsm__loading' }, h('span', { className: 'nsm__spinner' }), h('span', null, t('loading'))));
+            } else if (status === 'error' && !data) {
+              pane.push(h('div', { key: 'error', className: 'nsm__error' },
+                h('p', null, error || t('error.load')),
+                h('button', { type: 'button', className: 'nsm__button', onClick: () => load({}) }, t('action.retry')),
+              ));
+            } else if (data) {
+              pane.push(h('div', { key: 'layout', className: 'nsm__layout' },
+                h('section', { key: 'tree', className: 'nsm__tree-card' },
+                  h('div', { className: 'nsm__tree-head' },
+                    h('h2', null, view === 'trash' ? t('trash.title') : t('tree.title')),
+                    h('span', { className: 'nsm__tree-head-meta' }, view === 'trash'
+                      ? trashCount(visibleTrash.length)
+                      : sessionCount(visibleSessions.length)),
+                  ),
+                  h('div', { className: 'nsm__tree-body', role: 'tree', 'aria-label': view === 'trash' ? t('trash.title') : t('page.title') },
+                    view === 'trash'
+                      ? (visibleTrash.length === 0
+                          ? h('div', { className: 'nsm__empty' },
+                              h('span', { className: 'nsm__empty-mark nsm__empty-mark--trash' }, h(Glyph, { name: 'trash', size: 52 })),
+                              h('h2', null, normalizedQuery === '' ? t('trash.empty') : t('tree.emptyFiltered')),
+                              h('p', null, normalizedQuery === '' ? t('trash.emptyBody') : t('tree.emptyFilteredBody')),
+                              normalizedQuery === ''
+                                ? h('button', { type: 'button', className: 'nsm__button', onClick: () => setView('sessions') }, t('view.sessions'))
+                                : h('button', { type: 'button', className: 'nsm__button', onClick: () => setQuery('') }, t('search.clear')),
+                            )
+                          : trashGroups.map(renderTrashGroup))
+                      : (visibleSessions.length === 0
+                          ? h('div', { className: 'nsm__empty' },
+                              h('span', { className: 'nsm__empty-mark' }, h(PageMark, { size: 64 })),
+                              h('h2', null, normalizedQuery === '' && stateFilter === 'all' ? t('empty.title') : t('tree.emptyFiltered')),
+                              h('p', null, normalizedQuery === '' && stateFilter === 'all' ? t('empty.body') : t('tree.emptyFilteredBody')),
+                              normalizedQuery === '' && stateFilter === 'all'
+                                ? h('button', { type: 'button', className: 'nsm__button nsm__button--primary', onClick: () => fileInputRef.current && fileInputRef.current.click() }, t('empty.cta'))
+                                : h('button', { type: 'button', className: 'nsm__button', onClick: () => { setQuery(''); setStateFilter('all'); } }, t('search.clear')),
+                            )
+                          : groups.map(renderGroup)),
+                  ),
+                ),
+                h('aside', { key: 'aside', className: 'nsm__aside' },
+                  h('section', { className: 'nsm__card' },
+                    h('div', { className: 'nsm__card-head' }, h('h2', null, view === 'trash'
+                      ? (selectedTrashEntries.length > 0 ? tr('selection.count', { n: selectedTrashEntries.length }) : t('selection.none'))
+                      : (selectedSessions.length > 0 ? tr('selection.count', { n: selectedSessions.length }) : t('selection.none')))),
+                    (view === 'trash' ? selectedTrashEntries.length > 0 : selectedSessions.length > 0)
+                      ? h('p', { className: 'nsm__selection-size' }, tr('selection.size', { size: formatBytes(view === 'trash' ? selectedTrashBytes : selectedBytes) }))
+                      : null,
+                    h('div', { className: 'nsm__selection-actions' },
+                      view === 'trash' ? [
+                        h('button', {
+                          key: 'restore',
+                          type: 'button',
+                          className: 'nsm__button nsm__button--primary',
+                          disabled: selectedTrashEntries.length === 0 || busy,
+                          onClick: () => restoreEntries(selectedTrashEntries.map((entry) => entry.trashId)),
+                        }, h(Glyph, { name: 'restore', size: 13 }), t('trash.restoreSelected')),
+                        h('button', {
+                          key: 'purge',
+                          type: 'button',
+                          className: 'nsm__button nsm__button--danger',
+                          disabled: selectedTrashEntries.length === 0 || busy,
+                          onClick: () => requestPurge(selectedTrashEntries.map((entry) => entry.trashId)),
+                        }, h(Glyph, { name: 'trash', size: 13 }), t('trash.purgeSelected')),
+                      ] : [
+                        h('button', {
+                          key: 'export',
+                          type: 'button',
+                          className: 'nsm__button',
+                          disabled: selectedSessions.length === 0,
+                          onClick: () => exportSessions(selectedSessions.map((session) => session.id)),
+                        }, h(Glyph, { name: 'export', size: 13 }), t('action.exportSelected')),
+                        h('button', {
+                          key: 'delete',
+                          type: 'button',
+                          className: 'nsm__button nsm__button--danger',
+                          disabled: !canDeleteSelected || busy,
+                          onClick: () => requestDelete(selectedSessions.map((session) => session.id)),
+                        }, h(Glyph, { name: 'trash', size: 13 }), t('action.deleteSelected')),
+                      ],
+                    ),
+                    h('p', { className: 'nsm__hint' }, view === 'trash' ? t('selection.trashHint') : t('selection.hint')),
+                  ),
+                  renderDetail(),
+                  h('section', { className: 'nsm__card nsm__import-card' },
+                    h('div', { className: 'nsm__card-head' }, h('h2', null, t('import.title'))),
+                    h('p', { className: 'nsm__hint', style: { marginTop: 0 } }, t('import.hint')),
+                    h('button', {
+                      type: 'button',
+                      className: 'nsm__button',
+                      disabled: importing,
+                      onClick: () => fileInputRef.current && fileInputRef.current.click(),
+                    }, h(Glyph, { name: 'import', size: 13 }), importing ? t('action.importing') : t('action.import')),
+                  ),
+                ),
+              ));
+
+              if (data.sessionRoot) {
+                pane.push(h('footer', { key: 'footer', className: 'nsm__footer' },
+                  h('div', { className: 'nsm__footer-line' },
+                    h('span', null, `${t('footer.storage')} `, h('code', null, data.sessionRoot)),
+                  ),
+                  h('div', { className: 'nsm__footer-line' },
+                    h('span', null, t('footer.package'), h('code', null, PACKAGE_NAME)),
+                    h('button', {
+                      type: 'button',
+                      className: 'nsm__footer-copy',
+                      title: t('action.copyPackage'),
+                      'aria-label': t('action.copyPackage'),
+                      onClick: () => copyId(PACKAGE_NAME),
+                    }, h(Glyph, { name: 'copy', size: 11 })),
+                  ),
+                  h('div', { className: 'nsm__footer-line' }, h('span', null, t('footer.note'))),
+                ));
+              }
+            }
+
+            mainContent.push(h('div', { key: 'pane-session', className: 'nsm__pane nsm__pane--session' }, ...pane));
+          } else {
+            const pane = [];
+
+            // ── Toolbar ──
+            pane.push(h('div', { key: 'rule-toolbar', className: 'nsm__rules-toolbar' },
+              h('div', { className: 'nsm__rules-toolbar-head' },
+                h('span', { className: 'nsm__rules-title' }, t('rule.title')),
+                h('span', { className: 'nsm__rules-meta' }, tr('rule.titleMeta', { total: ruleStats.total, enabled: ruleStats.enabled })),
+              ),
+              h('button', {
+                type: 'button', className: 'nsm__button',
+                disabled: rulesStatus === 'loading',
+                onClick: () => setRuleForm({ id: null, title: '', content: '' }),
+              }, h(Glyph, { name: 'plus', size: 12 }), t('rule.new')),
+            ));
+
+            // ── Rules list ──
+            if (rulesStatus === 'loading') {
+              pane.push(h('div', { key: 'rule-loading', className: 'nsm__loading' },
+                h('span', { className: 'nsm__spinner' }), h('span', null, t('loading'))));
+            } else if (rulesStatus === 'error') {
+              pane.push(h('div', { key: 'rule-error', className: 'nsm__error' },
+                h('p', null, t('rule.loadError')),
+                h('button', { type: 'button', className: 'nsm__button', onClick: loadRules }, t('action.retry'))));
+            } else if (computedRules.length === 0) {
+              pane.push(h('div', { key: 'rule-empty', className: 'nsm__empty' },
+                h('span', { className: 'nsm__empty-mark' }, h(Glyph, { name: 'branch', size: 52 })),
+                h('h2', null, t('rule.empty')),
+                h('p', null, t('rule.emptyBody')),
+                h('button', { type: 'button', className: 'nsm__button nsm__button--primary', onClick: () => setRuleForm({ id: null, title: '', content: '' }) }, t('rule.emptyCta'))));
+            } else {
+              pane.push(h('div', { key: 'rule-list', className: 'nsm__rules-list' },
+                computedRules.map((rule) => {
+                  const isCollapsed = collapsedRules[rule.id] !== false; // default collapsed
+                  return h('div', {
+                    key: rule.id,
+                    className: `nsm__rule-card${rule.enabled ? '' : ' is-disabled'}`,
+                  },
+                    // ── Head: title + updatedAt ──
+                    h('div', { className: 'nsm__rule-card-head' },
+                      h('div', {
+                        className: `nsm__rule-card-title${rule.enabled ? '' : ' is-disabled'}`,
+                        title: rule.title || '(untitled)',
+                      }, rule.title || '(untitled)'),
+                      h('span', { className: 'nsm__rule-card-meta' },
+                        relativeTime(rule.updatedAt),
+                      ),
+                    ),
+                    // ── Body: content (collapsible) ──
+                    h('div', { className: 'nsm__rule-card-body' },
+                      h('div', {
+                        className: `nsm__rule-card-content${isCollapsed ? ' is-collapsed' : ''}`,
+                      }, rule.content),
+                      rule.content && rule.content.length > 40
+                        ? h('button', {
+                            type: 'button',
+                            className: 'nsm__rule-card-toggle',
+                            onClick: () => toggleRuleCollapsed(rule.id),
+                          }, isCollapsed ? t('rule.showMore') : t('rule.showLess'))
+                        : null,
+                    ),
+                    // ── Foot: scope segmented tabs + scope indicator + toggle + edit + delete ──
+                    h('div', { className: 'nsm__rule-card-foot' },
+                      // Scope segmented tabs
+                      h('div', { className: 'nsm__scope-tabs', role: 'tablist' },
+                        ['global', 'workspace', 'session'].map((scope) =>
+                          h('button', {
+                            key: scope,
+                            type: 'button',
+                            role: 'tab',
+                            className: `nsm__scope-tab${rule.scope === scope ? ' is-active' : ''}`,
+                            title: t(`rule.scope.${scope}Hint`),
+                            onClick: () => handleScopeChange(rule.id, scope),
+                          }, t(`rule.scope.${scope}`)),
+                        ),
+                      ),
+                      // Scope-specific indicator
+                      rule.scope === 'global'
+                        ? h('span', { className: 'nsm__scope-global-hint' }, t('rule.scope.globalHint'))
+                        : h('button', {
+                            type: 'button',
+                            className: 'nsm__scope-picker-btn',
+                            'data-scope': rule.scope,
+                            onClick: () => openPicker(rule.id, rule.scope, rule.targets || []),
+                          },
+                            t(`rule.scope.${rule.scope}Pick`),
+                            h('span', { className: 'nsm__scope-count' }, (rule.targets || []).length || '0'),
+                          ),
+                      h('div', { className: 'nsm__rule-card-foot-spacer' }),
+                      h('label', { className: 'nsm__toggle', title: rule.enabled ? t('rule.toggleOff') : t('rule.toggleOn') },
+                        h('input', { type: 'checkbox', checked: rule.enabled, onChange: (e) => handleToggleRule(rule.id, e.target.checked) }),
+                        h('span', { className: 'nsm__toggle-track' }),
+                      ),
+                      h('button', {
+                        type: 'button', className: 'nsm__icon-btn',
+                        title: t('rule.edit'), 'aria-label': t('rule.edit'),
+                        onClick: () => setRuleForm({ id: rule.id, title: rule.title, content: rule.content }),
+                      }, h(Glyph, { name: 'edit', size: 13 })),
+                      h('button', {
+                        type: 'button', className: 'nsm__icon-btn is-danger',
+                        title: t('rule.delete'), 'aria-label': t('rule.delete'),
+                        onClick: () => setDeleteRuleId(rule.id),
+                      }, h(Glyph, { name: 'trash', size: 13 })),
+                    ),
+                  );
+                }),
+              ));
+            }
+
+            // ── Rule form modal ──
+            if (ruleForm) {
+              pane.push(h(RuleFormModal, {
+                key: 'rule-form-modal',
+                form: ruleForm,
+                onClose: () => setRuleForm(null),
+                onChange: (patch) => setRuleForm((prev) => ({ ...prev, ...patch })),
+                onSave: (form) => handleSaveRule(form),
+                onDelete: ruleForm.id ? () => { setDeleteRuleId(ruleForm.id); setRuleForm(null); } : null,
+                t,
+              }));
+            }
+
+            // ── Delete confirm modal ──
+            if (deleteRuleId) {
+              const target = rulesData[deleteRuleId];
+              pane.push(h(ConfirmModal, {
+                key: 'rule-delete-confirm',
+                title: t('rule.deleteConfirmTitle'),
+                body: tr('rule.deleteConfirmBody', { title: target?.title || deleteRuleId }),
+                danger: true,
+                confirmLabel: t('rule.delete'),
+                onConfirm: () => handleDeleteRule(deleteRuleId),
+                onCancel: () => setDeleteRuleId(null),
+                t,
+              }));
+            }
+
+            // ── Scope picker modal (tree selection — unified) ──
+            if (picker) {
+              const sessions = Array.isArray(sessionsData) ? sessionsData : [];
+              const isSessionPicker = picker.scope === 'session';
+
+              // Build workspace → [sessions] groups (workspace is an object: {id,title,path})
+              const byWs = {};
+              sessions.forEach((s) => {
+                const raw = s?.workspace;
+                const wsId = (raw && typeof raw === 'object' ? raw.id : raw) || '(unassigned)';
+                const wsTitle = (raw && typeof raw === 'object' ? (raw.title || raw.path) : raw) || '(unassigned)';
+                const wsPath = (raw && typeof raw === 'object' ? raw.path : '') || '';
+                if (!byWs[wsId]) byWs[wsId] = { id: wsId, title: wsTitle, path: wsPath, sessions: [] };
+                byWs[wsId].sessions.push(s);
+              });
+              const groups = Object.values(byWs).sort((a, b) => a.title.localeCompare(b.title));
+
+              const q = (picker.search || '').toLowerCase().trim();
+              const filterMatch = (str) => !q || String(str).toLowerCase().includes(q);
+
+              const renderCheckbox = (checked) => h('input', {
+                type: 'checkbox',
+                checked: !!checked,
+                onChange: () => {},
+                readOnly: true,
+                style: { flexShrink: 0, margin: 0 },
+              });
+
+              const tree = groups.map((ws) => {
+                const wsName = ws.title;
+                const wsKey = `ws:${ws.id}`;
+                const isOpen = picker.expanded[wsKey] !== false;
+                const anySessionMatch = ws.sessions.some((s) => filterMatch(s.title || s.id));
+
+                // Determine target value based on scope (workspace scope targets workspace id)
+                const wsTarget = ws.id;
+                const wsChecked = isSessionPicker
+                  ? ws.sessions.every((s) => picker.targets.includes(s.id))
+                  : picker.targets.includes(wsTarget);
+
+                // Group sessions by month
+                const byMonth = {};
+                ws.sessions.forEach((s) => {
+                  const m = new Date(s?.updatedAt || s?.createdAt || Date.now()).toISOString().slice(0, 7);
+                  if (!byMonth[m]) byMonth[m] = [];
+                  byMonth[m].push(s);
+                });
+                const months = Object.keys(byMonth).sort((a, b) => b.localeCompare(a));
+
+                // Filter-out workspace if no match
+                const wsMatch = isSessionPicker
+                  ? !q || anySessionMatch || filterMatch(wsName)
+                  : !q || filterMatch(wsName);
+
+                if (!wsMatch) return null;
+
+                // Click handler for ws group head
+                const onWsToggle = () => {
+                  if (isSessionPicker) {
+                    // Session picker → toggle all session ids under this ws
+                    const allIds = ws.sessions.map((s) => s.id);
+                    const allIn = allIds.every((id) => picker.targets.includes(id));
+                    setPicker((prev) => {
+                      if (!prev) return prev;
+                      const rest = prev.targets.filter((t) => !allIds.includes(t));
+                      return { ...prev, targets: allIn ? rest : [...rest, ...allIds] };
+                    });
+                  } else {
+                    // Workspace picker → toggle workspace id
+                    togglePickerTarget(wsTarget);
+                  }
+                };
+
+                return h('div', { key: wsKey, className: 'nsm__picker-group' },
+                  h('div', { className: 'nsm__picker-group-head', onClick: onWsToggle, style: { cursor: 'pointer' } },
+                    h('span', {
+                      className: `nsm__picker-group-arrow${isOpen ? ' is-open' : ''}`,
+                      onClick: (e) => { e.stopPropagation(); togglePickerGroup(wsKey); },
+                      style: { cursor: 'pointer' },
+                    }, '▶'),
+                    renderCheckbox(wsChecked),
+                    h('span', { className: 'nsm__picker-group-label', title: ws.path || wsName }, wsName),
+                    h('span', { className: 'nsm__picker-group-count' }, `${ws.sessions.length} 会话`),
+                  ),
+                  isOpen && isSessionPicker ? months.map((m) => {
+                    const monthSessions = byMonth[m];
+                    return h('div', { key: m },
+                      h('div', { className: 'nsm__picker-month' }, m),
+                      monthSessions.map((s) => {
+                        if (!filterMatch(s.title || s.id)) return null;
+                        const checked = picker.targets.includes(s.id);
+                        return h('div', {
+                          key: s.id, className: 'nsm__picker-item',
+                          onClick: () => togglePickerTarget(s.id),
+                        },
+                          renderCheckbox(checked),
+                          h('span', { className: 'nsm__picker-item-label', title: s.title || s.id }, s.title || s.id),
+                          h('span', { className: 'nsm__picker-item-meta' }, relativeTime(s.updatedAt || s.createdAt)),
+                        );
+                      }).filter(Boolean),
+                    );
+                  }) : null,
+                );
+              }).filter(Boolean);
+
+              pane.push(h('div', {
+                key: 'rule-scope-picker',
+                className: 'nsm__modal',
+                onClick: closePicker,
+              },
+                h('div', { className: 'nsm__modal-card', onClick: (e) => e.stopPropagation(), style: { width: 'min(640px, 90vw)', maxHeight: 'min(72vh, 600px)' } },
+                  h('div', { className: 'nsm__modal-head' },
+                    h('h3', null, isSessionPicker ? t('rule.picker.sessionTitle') : t('rule.picker.workspaceTitle')),
+                    h('button', { className: 'nsm__modal-close', onClick: closePicker }, '✕'),
+                  ),
+                  h('div', { className: 'nsm__picker' },
+                    h('input', {
+                      className: 'nsm__picker-search',
+                      type: 'text',
+                      placeholder: t('rule.picker.search'),
+                      value: picker.search,
+                      onChange: (e) => setPicker((p) => p ? { ...p, search: e.target.value } : p),
+                      autoFocus: true,
+                    }),
+                    h('div', { className: 'nsm__picker-tree' },
+                      tree.length
+                        ? tree
+                        : h('div', { style: { padding: '24px', textAlign: 'center', color: 'var(--nsm-tertiary)', fontSize: '11.5px' } }, t('rule.picker.empty')),
+                    ),
+                  ),
+                  h('div', { className: 'nsm__picker-actions' },
+                    h('span', { className: 'nsm__picker-selected-info' }, tr('rule.picker.selected', { n: picker.targets.length })),
+                    h('div', { className: 'nsm__modal-footer' },
+                      h('button', { type: 'button', className: 'nsm__button', onClick: closePicker }, t('action.cancel')),
+                      h('button', { type: 'button', className: 'nsm__button nsm__button--primary', onClick: handlePickerConfirm }, t('action.save')),
+                    ),
+                  ),
+                ),
+              ));
+            }
+
+            mainContent.push(h('div', { key: 'pane-rule', className: 'nsm__pane nsm__pane--rule' }, ...pane));
           }
+
+          // ── Assemble workspace: sidebar + main ──
+          content.push(h('div', { key: 'workspace', className: 'nsm__workspace' },
+            h('nav', { key: 'sidebar', className: 'nsm__sidebar', role: 'navigation' },
+              MODULES.map((mod) => h('button', {
+                key: mod.id,
+                type: 'button',
+                role: 'tab',
+                'aria-selected': activeModule === mod.id ? 'true' : 'false',
+                className: `nsm__module${activeModule === mod.id ? ' is-active' : ''}`,
+                onClick: () => setActiveModule(mod.id),
+              },
+                h('span', { className: 'nsm__module-icon' }, h(Glyph, { name: mod.icon, size: 14 })),
+                h('span', { className: 'nsm__module-label' }, t(mod.key)),
+              )),
+            ),
+            h('div', { key: 'main', className: 'nsm__main' }, mainContent),
+          ));
 
           if (dragActive) {
             content.push(h('div', { key: 'drop', className: 'nsm__drop' },
